@@ -1,0 +1,404 @@
+---
+title: "5.15updates"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Hmisc)
+library(gdata)
+library(dplyr)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+prefdg<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320.csv")
+Patient320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+compareset<-cbind(Patient320,prefdg)
+
+
+ADset<-compareset[which(compareset[,3]=="AD"),]
+CNset<-compareset[which(compareset[,3]=="CN"),]
+
+ADAmy<-as.data.frame(colMeans(ADset[,c(4:151)]))
+CNAmy<-as.data.frame(colMeans(CNset[,c(4:151)]))
+ADTau<-as.data.frame(colMeans(ADset[,c(152:299)]))
+CNtau<-as.data.frame(colMeans(CNset[,c(152:299)]))
+ADFDG<-as.data.frame(colMeans(ADset[,c(300:447)]))
+CNFDG<-as.data.frame(colMeans(CNset[,c(300:447)]))
+
+
+
+allATNR<-read.csv("/Users/laurentzhang/Downloads/pred_onset_all_ATNR.csv")
+allATNR<-allATNR %>%
+  slice(2:149)
+```
+
+
+```{r}
+
+# check correlation
+
+a<-as.data.frame(cbind(as.numeric(allATNR$Var3),as.numeric(allATNR2$Var3)))
+b<-as.data.frame(cbind(as.numeric(allATNR$Var4),as.numeric(allATNR2$Var4)))
+c<-as.data.frame(cbind(as.numeric(allATNR$Var5),as.numeric(allATNR2$Var5)))
+
+
+
+amyp<-ggplot(c,aes(x=V1,y=V2))+
+  geom_point(size =3)+
+  geom_smooth(size=1.5,level = 0.8)+
+  ylab("FDG p-value")+
+  xlab("Nodes sorted by regional SUVR")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  theme_bw() +  
+  ylim(0,0.025)+
+  
+    theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+
+ggsave(
+  file="comparsionFDG.png",
+  plot = amyp,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+```{r conduct ttest}
+#amy
+for (i in 4:151){
+  a<-as.data.frame(ADset[,i])
+  b<-as.data.frame(CNset[,i])
+  allATNR[i-3,3]<-t.test(a,b,alternative = "two.sided", var.equal = FALSE)$p.value
+}
+
+#tau
+for (i in 152:299){
+  a<-as.data.frame(ADset[,i])
+  b<-as.data.frame(CNset[,i])
+  allATNR[i-151,4]<-t.test(a,b,alternative = "two.sided", var.equal = FALSE)$p.value
+}
+
+#fdg
+for (i in 300:447){
+  a<-as.data.frame(ADset[,i])
+  b<-as.data.frame(CNset[,i])
+  allATNR[i-299,5]<-t.test(a,b,alternative = "two.sided", var.equal = FALSE)$p.value
+}
+
+
+```
+
+```{r}
+write.csv(allATNR,"atnr.csv", row.names = TRUE)
+
+
+```
+```{r sort allatnr}
+#allATNR <- allATNR[order(allATNR$Var1),]
+allATNR$Var1
+colnames(allATNR)<-c("Var1","Var2","Amy","Tau","Fdg","Var3")
+
+library("reshape2")
+c<-allATNR %>%
+  gather(Var1, Var2)
+
+c<-c %>%
+  slice(1:444)
+
+
+d<-cbind(c(1:444),c)
+
+
+for(i in 1:148){
+  
+  d[i,1] = i
+  d[i+148,1] = i
+  d[i+296,1] = i
+}
+
+colnames(d)<-c("Node","ATN","Value")
+```
+
+```{r}
+
+hubplot<-ggplot(d, aes(x=Node,y=as.numeric(Value), color = ATN))+
+  geom_point(size =3,aes(color = ATN))+
+  geom_smooth(size=1.5,level = 0.8)+
+  ylab("")+
+  xlab("p-value Nodes")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  theme_bw() +  
+  ylim(0,0.025)+
+  
+    theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+hubplot
+ggsave(
+  file="comparsion.png",
+  plot = hubplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+```{r}
+allATNR$Var1 <-NULL
+allATNR<-cbind(allATNR, c(1:148))
+colnames(allATNR)<-c("Node", "A","T","N","R","Node_number")
+
+allATNR_2<-allATNR
+```
+
+
+```{r}
+allATNR<-allATNR %>%
+  slice(1:74)
+
+
+```
+
+
+```{r modify}
+
+allATNR[41,]<-allATNR_2[115,]
+network<-abs(as.data.frame(t(read.csv(file="/Users/laurentzhang/Downloads/networkStrength.csv"))))
+rownames(network)<-c(1:148)
+network<-cbind(network,c(1:148))
+```
+
+
+## ok go
+
+```{r pressure, echo=FALSE}
+#save(allATNR, file = "allATNR.Rda")
+
+a<-as.data.frame(allATNR$A)
+a<-cbind(a,c(1:74),allATNR$Node)
+colnames(a)<-c("Node","ATNR","Region")
+
+b<-as.data.frame(allATNR$T)
+b<-cbind(b,c(1:74),allATNR$Node)
+colnames(b)<-c("Node","ATNR","Region")
+
+c<-as.data.frame(allATNR$N)
+c<-cbind(c,c(1:74),allATNR$Node)
+colnames(c)<-c("Node","ATNR","Region")
+
+d<-as.data.frame(allATNR$R)
+d<-cbind(d,c(1:74),allATNR$Node)
+colnames(d)<-c("Node","ATNR","Region")
+
+e<-as.data.frame(network$V1)
+e<-cbind(e,c(1:74),allATNR$Node)
+colnames(e)<-c("Node","ATNR","Region")
+e<-e %>%
+slice(75:148)
+
+network2<-network %>%
+slice(1:74)
+#ATNR_total<-rbind(a,b,c,d)
+```
+
+
+```{r find order based on the r order}
+
+num<-d[order(d$Node),]$ATNR
+num
+
+a$ATNR<-factor(a$ATNR,levels = num)
+a<-a[order(a$ATNR),]
+a<-cbind(a,c(1:74))
+
+
+b$ATNR  <- factor(b$ATNR , levels = num)
+b<-b[order(b$ATNR),]
+b<-cbind(b,c(1:74))
+
+c$ATNR  <- factor(c$ATNR , levels = num)
+c<-c[order(c$ATNR),]
+c<-cbind(c,c(1:74))
+
+d$ATNR  <- factor(d$ATNR , levels = num)
+d<-d[order(d$ATNR),]
+d<-cbind(d,c(1:74))
+
+e$ATNR  <- factor(e$ATNR , levels = num)
+e<-e[order(e$ATNR),]
+e<-cbind(e,c(1:74))
+```
+
+
+```{r}
+ATNR_total<-rbind(a,b,c,d,e)
+colnames(ATNR_total)<-c("Value","Node","Region","Sort")
+
+
+#ATNR_total<-cbind(ATNR_total, c(1:296))
+ATNR_total[1:74,5] ="A"
+ATNR_total[75:148,5] ="T"
+ATNR_total[149:222,5] ="N"
+ATNR_total[223:296,5] = "R"
+ATNR_total[297:370,5] = "Network"
+colnames(ATNR_total)<-c("Value","Node","Region","Sort","ATNR")
+```
+
+```{r}
+for (i in 1:74){
+  ATNR_total[i, 4] = i
+  ATNR_total[i+74, 4]= i
+  ATNR_total[i+148, 4] = i
+  ATNR_total[i+222, 4] = i
+  ATNR_total[i+296, 4] = i
+}
+
+colnames(ATNR_total)<-c("Value","Node","Region","Sort","ATNR")
+
+
+f<-ATNR_total$Region
+```
+
+
+```{r}
+
+ATNR_total$ATNR <- factor(ATNR_total$ATNR,levels= c("A","T","N","R","Network"))
+riskplot<-ggplot(ATNR_total, aes(fill = ATNR, x=Node, y=as.numeric(Value))) +
+    scale_fill_manual(values=c("#f8766d", "#00bfc4", "#52854C", "#FFC947","#FF61C3"),labels = c("Amyloid", "Tau", "Neurodegeneration ","Predicted Risk","Network"))+
+    geom_bar(position="stack", stat="identity",alpha=.6, width=0.9) +
+    theme(axis.text.x = element_text(angle = 90))+
+    #scale_fill_discrete(labels = c("A", "T", "N","Risk"))+
+#, axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"))+
+    xlab("")+ylab("")+ scale_x_discrete(labels = f)+
+    
+    theme( aspect.ratio=7/22,
+           #y.text = element_text(size=20,face ="bold"),
+      axis.text.y = element_text(size = 30),
+      axis.text.x = element_text(size = 16,face ="bold",color = "red"),
+      panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+    # change legend font size
+      legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.025,.9),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+riskplot
+
+
+ggsave(
+  file="figure5.png",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 10*1.8,
+  height = 5*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+```
+```{r}
+
+ggplot(ATNR_total, aes(fill = ATNR, x=Node, y=as.numeric(Value))) +
+    geom_bar(position="stack", stat="identity",alpha=.6, width=0.9) +
+    #theme(axis.text.x = element_text(angle = 90), axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"))
+    xlab("Node")+ylab("Predicted Risk")+
+  
+    theme( aspect.ratio=5/16,
+           text = element_text(size=15),
+      axis.title.y = element_text(size = 30),
+      axis.title.x = element_text(size = 30),
+    
+    # change legend font size
+      legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.9),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+```

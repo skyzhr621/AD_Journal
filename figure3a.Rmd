@@ -1,0 +1,212 @@
+---
+title: "figure3a"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+label<-read.csv("/Users/laurentzhang/Downloads/label.csv")
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+Amy_320<-as.data.frame(rowMeans(Pred_updated[,c(1:148)]))
+Tau_320<-as.data.frame(rowMeans(Pred_updated[,c(149:296)]))
+FDG_320<-as.data.frame(rowMeans(Pred_updated[,c(297:444)]))
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+Amy_320<-cbind(Amy_320,label$Var3,rowMeans(pred22[,c(3:150)]))
+Tau_320<-cbind(Tau_320,label$Var3,rowMeans(pred22[,c(3:150)]))
+FDG_320<-cbind(FDG_320,label$Var3,rowMeans(pred22[,c(3:150)]))
+```
+
+
+
+```{r}
+
+for (i in 1:320){
+  if(Amy_320[i,2] == "CN"){
+    Amy_320[i,2] ="NC+MCI"
+  }
+  if(Tau_320[i,2] == "CN"){
+    Tau_320[i,2] ="NC+MCI"
+  }
+  if(FDG_320[i,2] == "CN"){
+    FDG_320[i,2] ="NC+MCI"
+  }
+  
+  
+}
+colnames(Amy_320)<-c("Amyloid", "DX","Prediction")
+colnames(Tau_320)<- c("Tau","DX","Prediction")
+colnames(FDG_320)<- c("FDG","DX","Prediction")
+```
+# amyloid graph
+```{r N VS A}
+summary(lm(Amy_320$Amyloid~Amy_320$Prediction))
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Amy_320, aes(x =  Prediction, y = Amyloid, color = DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="A SUVR", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Amy_320$Prediction),max(Amy_320$Prediction)) + 
+  ylim(min(Amy_320$Amyloid),max(Amy_320$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.01,.82),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =3.45, x = 0.8, parse = TRUE, label = "r^2 == 0.49", size=10 )+annotate("text", y =3.15, x = 0.743, parse = TRUE, label = "p == 0", size=10 )
+ATdiff
+
+ggsave(
+  file="AmyvsPred320.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+cor.test(Amy_320$Amyloid,Amy_320$Prediction,method=c("pearson"))$p.value
+```
+
+# tau graph
+```{r N VS A}
+summary(lm(Tau_320$Tau~Tau_320$Prediction))
+
+
+ATdiff<- ggplot(Tau_320, aes(x =  Prediction, y = Tau, color = DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="T SUVR", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Tau_320$Prediction),max(Tau_320$Prediction)) + 
+  ylim(min(Tau_320$Tau),max(Tau_320$Tau))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.01,.82),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =3.3, x = 0.8, parse = TRUE, label = "r^2 == 0.42", size=10 )+annotate("text", y =3.0, x = 0.743, parse = TRUE, label = "p == 0", size=10 )
+ATdiff
+
+ggsave(
+  file="TauvsPred320.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+cor.test(Tau_320$Tau,Tau_320$Prediction,method=c("pearson"))$p.value
+```
+```{r N VS A}
+summary(lm(FDG_320$FDG~FDG_320$Prediction))
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(FDG_320, aes(x =  Prediction, y = FDG, color = DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="[N] SUVR", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(FDG_320$Prediction),max(FDG_320$Prediction)) + 
+  ylim(min(FDG_320$FDG),max(FDG_320$FDG))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.01,.82),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.8, x = 0.88, parse = TRUE, label = "r^2 == 0.13", size=10 )+annotate("text", y =0.74, x = 0.82, parse = TRUE, label = "p == 0", size=10 )
+ATdiff
+
+ggsave(
+  file="FDGvsPred320.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+cor.test(FDG_320$FDG,FDG_320$Prediction,method=c("pearson"))$p.value
+```

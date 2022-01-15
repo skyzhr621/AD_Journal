@@ -1,0 +1,208 @@
+---
+title: "5.15updates"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Hmisc)
+library(gdata)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+allATNR<-read.csv("/Users/laurentzhang/Downloads/pred_onset_all_ATNR.csv")
+allATNR<-allATNR %>%
+  slice(2:149)
+```
+
+```{r}
+allATNR$Var1 <-NULL
+allATNR<-cbind(allATNR, c(1:148))
+colnames(allATNR)<-c("Node", "A","T","N","R","Node_number")
+
+allATNR_2<-allATNR
+```
+
+
+```{r}
+allATNR<-allATNR %>%
+  slice(1:74)
+
+
+```
+
+
+```{r modify}
+
+allATNR[41,]<-allATNR_2[115,]
+
+```
+
+
+## ok go
+
+```{r pressure, echo=FALSE}
+#save(allATNR, file = "allATNR.Rda")
+
+a<-as.data.frame(allATNR$A)
+a<-cbind(a,c(1:74),allATNR$Node)
+colnames(a)<-c("Node","ATNR","Region")
+
+b<-as.data.frame(allATNR$T)
+b<-cbind(b,c(1:74),allATNR$Node)
+colnames(b)<-c("Node","ATNR","Region")
+
+c<-as.data.frame(allATNR$N)
+c<-cbind(c,c(1:74),allATNR$Node)
+colnames(c)<-c("Node","ATNR","Region")
+
+d<-as.data.frame(allATNR$R)
+d<-cbind(d,c(1:74),allATNR$Node)
+colnames(d)<-c("Node","ATNR","Region")
+
+#ATNR_total<-rbind(a,b,c,d)
+```
+
+
+```{r find order based on the r order}
+
+num<-d[order(d$Node),]$ATNR
+num
+
+a$ATNR<-factor(a$ATNR,levels = num)
+a<-a[order(a$ATNR),]
+a<-cbind(a,c(1:74))
+
+
+b$ATNR  <- factor(b$ATNR , levels = num)
+b<-b[order(b$ATNR),]
+b<-cbind(b,c(1:74))
+
+c$ATNR  <- factor(c$ATNR , levels = num)
+c<-c[order(c$ATNR),]
+c<-cbind(c,c(1:74))
+
+d$ATNR  <- factor(d$ATNR , levels = num)
+d<-d[order(d$ATNR),]
+d<-cbind(d,c(1:74))
+```
+
+
+```{r}
+ATNR_total<-rbind(a,b,c,d)
+colnames(ATNR_total)<-c("Value","Node","Region","Sort")
+
+```
+
+```{r}
+#ATNR_total<-cbind(ATNR_total, c(1:296))
+ATNR_total[1:74,5] ="A"
+ATNR_total[75:148,5] ="T"
+ATNR_total[149:222,5] ="N"
+ATNR_total[223:296,5] = "R"
+colnames(ATNR_total)<-c("Value","Node","Region","Sort","ATNR")
+```
+
+```{r}
+for (i in 1:74){
+  ATNR_total[i, 4] = i
+  ATNR_total[i+74, 4]= i
+  ATNR_total[i+148, 4] = i
+  ATNR_total[i+222, 4] = i
+}
+
+colnames(ATNR_total)<-c("Value","Node","Region","Sort","ATNR")
+
+
+f<-ATNR_total$Region
+```
+
+
+```{r}
+
+ATNR_total$ATNR <- factor(ATNR_total$ATNR,levels= c("A","T","N","R"))
+riskplot<-ggplot(ATNR_total, aes(fill = ATNR, x=Node, y=as.numeric(Value))) +
+    scale_fill_manual(values=c("#f8766d", "#00bfc4", "#52854C", "#FFC947"),labels = c("Amyloid", "Tau", "Neurodegeneration ","Predicted Risk"))+
+    geom_bar(position="stack", stat="identity",alpha=.6, width=0.9) +
+    theme(axis.text.x = element_text(angle = 90))+
+    #scale_fill_discrete(labels = c("A", "T", "N","Risk"))+
+#, axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"))+
+    xlab("")+ylab("")+ scale_x_discrete(labels = f)+
+    
+    theme( aspect.ratio=7/22,
+           #y.text = element_text(size=20,face ="bold"),
+      axis.text.y = element_text(size = 30),
+      axis.text.x = element_text(size = 16,face ="bold",color = "red"),
+      panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+    # change legend font size
+      legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.025,.9),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+riskplot
+
+
+ggsave(
+  file="tplot.png",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 10*1.8,
+  height = 5*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+```
+```{r}
+
+ggplot(ATNR_total, aes(fill = ATNR, x=Node, y=as.numeric(Value))) +
+    geom_bar(position="stack", stat="identity",alpha=.6, width=0.9) +
+    #theme(axis.text.x = element_text(angle = 90), axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"))
+    xlab("Node")+ylab("Predicted Risk")+
+  
+    theme( aspect.ratio=5/16,
+           text = element_text(size=15),
+      axis.title.y = element_text(size = 30),
+      axis.title.x = element_text(size = 30),
+    
+    # change legend font size
+      legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.9),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+```

@@ -1,0 +1,400 @@
+---
+title: "8.13updates"
+output: html_document
+---
+
+```{r ggplot}
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+#FDG_SUVR <- read_excel("~/Downloads/FDG_SUVR.xlsx")
+Amyloid_SUVR <- read_excel("~/Downloads/Amyloid_SUVR.xlsx")
+Amyloid_SUVR<-na.omit(Amyloid_SUVR)
+
+
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>2),]
+
+Amyloid_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+Amyloid_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_first[i,] <- Amyloid_SUVR[min(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+Amyloid_last[i,] <- Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+colnames(Amyloid_first) <- colnames(Amyloid_SUVR)
+colnames(Amyloid_last) <- colnames(Amyloid_SUVR)
+Amyloid_SUVR_new<-t(Amyloid_SUVR[,12:159])
+
+
+```
+
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+
+k2 <- kmeans(Amyloid_SUVR_new[1:74,], centers = 9, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = Amyloid_SUVR_new[1:74,],)
+fviz_nbclust(Amyloid_SUVR_new[1:74,], kmeans, method = "silhouette")
+
+
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+
+k2 <- kmeans(Amyloid_SUVR_new[1:74,], centers = 2, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = Amyloid_SUVR_new[1:74,],)
+fviz_nbclust(Amyloid_SUVR_new[1:148,], kmeans, method = "silhouette")
+
+```
+
+```{r}
+for (i in 1:74){
+b<-paste("node",".jpg",sep = as.character(i), collapse = NULL)
+a<-ggplot(Amyloid_SUVR, aes(x=unlist(Amyloid_SUVR[,11+i]))) + 
+  xlab(b)+
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2, fill="#FF6666") 
+
+
+
+ ggsave(
+  file=b,
+  plot = a,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+}
+```
+
+```{r}
+ggplot(Amyloid_SUVR, aes(x=unlist(Amyloid_SUVR[,11+i]))) + 
+  xlab(b)+
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2, fill="#FF6666") 
+
+```
+
+
+
+```{r setup mixture model}
+
+compute.log.lik <- function(L, w) {
+  L[,1] = L[,1]*w[1]
+  L[,2] = L[,2]*w[2]
+  return(sum(log(rowSums(L))))
+}
+mixture.EM <- function(w.init, L) {
+  
+  w.curr <- w.init
+  
+  # store log-likehoods for each iteration
+  log_liks <- c()
+  ll       <- compute.log.lik(L, w.curr)
+  log_liks <- c(log_liks, ll)
+  delta.ll <- 1
+  
+  while(delta.ll > 1e-5) {
+    w.curr   <- EM.iter(w.curr, L)
+    ll       <- compute.log.lik(L, w.curr)
+    log_liks <- c(log_liks, ll)
+    delta.ll <- log_liks[length(log_liks)]  - log_liks[length(log_liks)-1]
+  }
+  return(list(w.curr, log_liks))
+}
+
+EM.iter <- function(w.curr, L, ...) {
+  
+  # E-step: compute E_{Z|X,w0}[I(Z_i = k)]
+  z_ik <- L
+  for(i in seq_len(ncol(L))) {
+    z_ik[,i] <- w.curr[i]*z_ik[,i]
+  }
+  z_ik<- z_ik / rowSums(z_ik)
+  
+  # M-step
+  w.next   <- colSums(z_ik)/sum(z_ik)
+  return(w.next)
+}
+```
+
+```{r try tau first so on}
+Amyloid_SUVR<-union(Amyloid_first,Amyloid_last)
+Amyloid_SUVR<-Amyloid_first
+Prob_second<-as.data.frame(matrix(0,148, 2))
+colnames(Prob_second)<-c("P_Tau-","P_Tau+") 
+for (i in 1:74){
+X<-Amyloid_SUVR[, 11+i]
+  
+EST<-normalmixEM(X, lambda = NULL, mu = NULL, sigma = NULL, k = 2,
+mean.constr = NULL, sd.constr = NULL,
+epsilon = 1e-08, maxit = 1000, maxrestarts= 20,
+verb = FALSE, fast=FALSE, ECM = FALSE,
+arbmean = TRUE, arbvar = TRUE)
+  
+mu.true<- EST$mu
+sigma.true<- EST$sigma
+
+L = matrix(NA, nrow=length(X), ncol= 2)
+L[, 1] = dnorm(X, mean=mu.true[1], sd = sigma.true[1])
+L[, 2] = dnorm(X, mean=mu.true[2], sd = sigma.true[2])
+
+
+#perform EM
+evaluation_prob<- mixture.EM(w.init=c(0.5, 0.5), L)
+Prob_second[i,1]<-EST[["lambda"]][1]
+Prob_second[i,2]<-EST[["lambda"]][2]
+Prob_second[i,3]<-EST[["mu"]][1]
+Prob_second[i,4]<-EST[["mu"]][2]
+
+
+
+}
+```
+
+# posterior probablity
+```{R}
+c<-as.data.frame(EST[["posterior"]])
+d<-c
+for(i in 1:nrow(Amyloid_SUVR)){
+  if(c[i,1]<c[i,2]){
+    d[i,1]<-"0"
+  } else {
+    d[i,1]<-"1"
+  }
+}
+
+Amyloid_SUVR$Type <-d$comp.1
+
+```
+
+```{r}
+ggplot(Amyloid_SUVR, aes(x=unlist(Amyloid_SUVR[,11+13]),color = Type, fill = Type)) + 
+  xlab("Node 13")+
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2, fill="#FF6666") 
+
+
+```
+
+
+## output to see
+```{r}
+for (i in 1:74){
+b<-paste("node",".jpg",sep = as.character(i), collapse = NULL)
+a<-ggplot(Amyloid_SUVR, aes(x=unlist(Amyloid_SUVR[,11+i]),color = Type, fill = Type)) + 
+  xlab(b)+
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2) 
+
+
+
+ ggsave(
+  file=b,
+  plot = a,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+}
+```
+
+# fit distribution
+```{r}
+Amyloid_0<-Amyloid_SUVR[which(Amyloid_SUVR$Type == "0"),]
+Amyloid_1<-Amyloid_SUVR[which(Amyloid_SUVR$Type == "1"),]
+
+fit0 <- fitdistr(Amyloid_0$`Node 14`, "normal")
+fit1 <- fitdistr(Amyloid_1$`Node 14`, "normal")
+
+Prob_0<-as.data.frame(matrix(0,nrow(Amyloid_0), 2))
+Prob_1<-as.data.frame(matrix(0,nrow(Amyloid_1), 2))
+
+ for(j in 1:nrow(Amyloid_0)){
+    Prob_0[j,1]<-pnorm(Amyloid_0[j,11+14], mean = fit0[["estimate"]][["mean"]], sd = fit0[["estimate"]][["sd"]])
+ }
+
+ for(j in 1:nrow(Amyloid_1)){
+    Prob_1[j,1]<-pnorm(Amyloid_1[j,11+14], mean = fit1[["estimate"]][["mean"]], sd = fit1[["estimate"]][["sd"]])
+ }
+
+Prob_0$V2<-Amyloid_0$`Node 14`
+Prob_1$V2<-Amyloid_1$`Node 14`
+
+ggplot(Prob_0, aes(x=V1)) + 
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2) 
+ggplot(Prob_1, aes(x=V1)) + 
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2) 
+```
+
+```{r}
+Amyloid_0$Stage<-Prob_0$V1
+Amyloid_1$Stage<-Prob_1$V1
+
+Amyloid_2<-union(Amyloid_0,Amyloid_1)
+
+ggplot(Amyloid_2, aes(x=`Node 14`,color = Stage, fill = Stage)) + 
+  geom_histogram(aes(y=..density..),binwidth=0.01)+
+  geom_density(alpha=.2) 
+```
+
+## Amyloid 分层
+
+### fit distribution
+```{r}
+Amyloid_SUVR<-na.omit(Amyloid_SUVR)
+normalnode148 <- as.data.frame(matrix(0,148,5))
+colnames(normalnode148) <- c('mean', 'sd', 'p-value' , 'Correlation','Differences in time')
+
+for(i in 1:148){
+  est<-fitdistr(as.numeric(unlist(Amyloid_SUVR[,i+11])),"normal")
+  normalnode148[i,1]<-coef(est)["mean"]
+  normalnode148[i,2]<-coef(est)["sd"]
+}
+
+```
+
+# 完成z-score
+```{r}
+Amyloid_prob<-Amyloid_SUVR
+for(i in 1:148){
+Amyloid_prob[,11+i]<-qnorm(pnorm(as.numeric(unlist(Amyloid_SUVR[,i+11])), mean = normalnode148[i,1], sd = normalnode148[i,2]))
+}
+
+```
+
+```{r}
+Amyloid_class<-Amyloid_prob 
+for(i in 1:148){
+  for(j in 1:nrow(Amyloid_prob)){
+    if(Amyloid_prob[j,11+i]<=1){
+      Amyloid_class[j,11+i]<-0
+    } else if(Amyloid_prob[j,11+i]>1 && Amyloid_prob[j,11+i]<=2 ){
+      Amyloid_class[j,11+i]<-1
+    } else if(Amyloid_prob[j,11+i]>2 && Amyloid_prob[j,11+i]<=3 ) {
+      Amyloid_class[j,11+i]<-2
+    
+    } else {
+      Amyloid_class[j,11+i]<-3
+    }
+  }
+}
+
+```
+
+```{r}
+a<-c(1,5,12,13,14,15,16,24,29,31,45,52,53,54,62,63,64,68,69,70,39,40,4,46)
+b<-c(17,18,41,47,48,49)
+c<-c(2,11,19,20,21,22,33,34,35,36,37,38,42,43,44,50,51,57,58,59,60,61,65,72,73,74,23)
+d<-c(3,25,26,27,28,30,55,56,67)
+e<-c(6,7,8,9,10,32,66,71)
+
+Amyloid_a<-Amyloid_class[,a+11]
+Amyloid_b<-Amyloid_class[,b+11]
+Amyloid_c<-Amyloid_class[,c+11]
+Amyloid_d<-Amyloid_class[,d+11]
+Amyloid_e<-Amyloid_class[,e+11]
+```
+
+
+
+```{r}
+Amyloid_a$Stage<-rowMeans(Amyloid_a)
+Amyloid_b$Stage<-rowMeans(Amyloid_b)
+Amyloid_c$Stage<-rowMeans(Amyloid_c)
+Amyloid_d$Stage<-rowMeans(Amyloid_d)
+Amyloid_e$Stage<-rowMeans(Amyloid_e)
+
+
+Amyloid_class$Stage1<-Amyloid_a$Stage
+Amyloid_class$Stage2<-Amyloid_b$Stage
+Amyloid_class$Stage3<-Amyloid_c$Stage
+Amyloid_class$Stage4<-Amyloid_d$Stage
+Amyloid_class$Stage5<-Amyloid_e$Stage
+
+```
+
+```{r}
+Amyloid_total<- Amyloid_class[,c(1:11,160:164)]
+Amyloid_find<-Amyloid_total
+
+for(i in 1:5){
+  for(j in 1:nrow(Amyloid_class)){
+    if(Amyloid_total[j,11+i]>0 && Amyloid_total[j,11+i]<=0.5){
+      Amyloid_find[j,11+i]<-1
+    } else if(Amyloid_total[j,11+i]>0.5 && Amyloid_total[j,11+i]<=1 ){
+      Amyloid_find[j,11+i]<-2
+    } else if(Amyloid_total[j,11+i]>1 && Amyloid_total[j,11+i]<=1.75 ) {
+      Amyloid_find[j,11+i]<-3
+    } else if(Amyloid_total[j,11+i]>1.75) {
+      Amyloid_find[j,11+i]<-4
+    
+    } else {
+       Amyloid_find[j,11+i]<-0
+    }
+  }
+}
+
+```
+
+
+```{r}
+for(i in 1:2629){
+Amyloid_find[i,17]<-paste(Amyloid_find[i,12],Amyloid_find[i,13],Amyloid_find[i,14],Amyloid_find[i,15],Amyloid_find[i,16],sep="")
+}
+Amyloid_find$pattern
+
+
+
+```
+
+
+```{r}
+write.csv(Amyloid_class,"Amyloid_calss.csv")
+Amyloid_effect<-read_excel("/Users/laurentzhang/amyloid tau/Amyloid_calss.xlsx")
+
+
+
+
+x<-ggplot(Amyloid_effect, aes(x=1:1167)) +
+  geom_smooth(aes(y = as.numeric(Stage1), colour = "var1")) + 
+  geom_smooth(aes(y = as.numeric(Stage2), colour = "var2")) +
+  geom_smooth(aes(y = as.numeric(Stage3), colour = "var3")) +
+  geom_smooth(aes(y = as.numeric(Stage4), colour = "var4")) +
+  geom_smooth(aes(y = as.numeric(Stage5), colour = "var5"))
+x
+ggsave(
+  file= "amyclass.jpg",
+  plot = x,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+

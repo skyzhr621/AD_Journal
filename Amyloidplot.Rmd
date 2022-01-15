@@ -1,0 +1,471 @@
+
+```{r setup, include=FALSE}
+keyA <-c(34,38,43,37,26,27,28,6,7,30,20,42,19,2,108,112,117,111,100,101,102,80,81,104,94,116,93,76)
+
+keyT <-c(32,42,11,44,21,57,2,59,19,1,5,62,24,64,106,116,85,118,95,131,76,133,93,75,79,136,98,138)
+
+keyN <-c(6,7,14,24,23,32,20,25,88,98,97,106,94,99)
+vul <- c(73,140,90,97,66,16,48,34,23,122,147,108,109,43)
+
+keyAnon <- setdiff(c(1:148),keyA)
+keyTnon <- setdiff(c(1:148),keyT)
+keyNnon <- setdiff(c(1:148),keyN)
+keyVulnon <- setdiff(c(1:148),vul)
+PatientInfo320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+
+Tau_320<-Tau_SUVR[which(Tau_SUVR$PTID %in% PatientInfo320$PTID),]
+Amy_320<-Amyloid_SUVR[which(Amyloid_SUVR$PTID %in% PatientInfo320$PTID),]
+FDG_320<-FDG_SUVR[which(FDG_SUVR$PTID %in% PatientInfo320$PTID),]
+
+new<-FDG_SUVR[which(FDG_SUVR$PTID %in% Amyloid_SUVR$PTID),]
+new2<-FDG_SUVR[which(new$PTID %in% Tau_SUVR$PTID),]
+
+
+for(i in 1:320){
+  
+  if (PatientInfo320[i,2] == "CN" || PatientInfo320[i,2] == "SMC" ){
+    PatientInfo320[i,2] = "NC"
+  }
+  if (PatientInfo320[i,2] == "LMCI"){
+    PatientInfo320[i,2] = "AD"
+  
+  } 
+  if (PatientInfo320[i,2] == "EMCI"){
+    PatientInfo320[i,2] = "MCI"
+  
+  }  
+}
+
+```
+
+## Amyloid
+```{r amy}
+
+Amy_320<-Amy_320[which(Amy_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+Amy_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amy_320)))
+
+for (i in 1:nrow(TABLE)){
+
+Amy_320_first[i,] <- Amy_320[max(which(Amy_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(Amy_320_first) <- colnames(Amy_320)
+#Amy_320_first<-na.omit(Amy_320_first)
+
+Amy_320_Node<-Amy_320_first[,c(12:159)]
+
+Amy_320_1<-as.data.frame(rowMeans(Amy_320_Node[,keyA]))
+Amy_320_2<-as.data.frame(rowMeans(Amy_320_Node[,keyAnon]))
+
+Amy_320_3<-cbind(Amy_320_1,PatientInfo320$DX)
+Amy_320_4<-cbind(Amy_320_2,PatientInfo320$DX)
+
+```
+
+```{r}
+colnames(Amy_320_3)<-c("Node","Group")
+colnames(Amy_320_4)<-c("Node","Group")
+Amy_320_Final<-rbind(Amy_320_3,Amy_320_4)
+Amy_320_Final$key <-c(1:640)
+Amy_320_Final$Number <-c(1:640)
+for (i in 1:320){
+  Amy_320_Final[i,3] = "Key"
+  Amy_320_Final[i+320,3] = "Non-key"
+  Amy_320_Final[i,4] = i
+  Amy_320_Final[i+320,4] = i
+}
+
+
+Amy_key<-Amy_320_Final[c(1:320),]
+Amy_nonkey<-Amy_320_Final[c(321:640),]
+
+#Amy_key$Number <- factor(Amy_key$Number,levels= x)
+Amy_key<-Amy_key[order(Amy_key$Number),]
+
+#Amy_nonkey$Number <- factor(Amy_nonkey$Number,levels= x)
+Amy_nonkey<-Amy_nonkey[order(Amy_nonkey$Number),]
+
+
+Amy_320_Final<-rbind(Amy_key,Amy_nonkey)
+```
+
+```{r}
+x<-Amy_320_Final[c(1:143,287:384,483:561),4]
+
+
+
+```
+## Including heatmap
+
+```{r}
+colors <- colorRampPalette(c("purple","blue", "green", "yellow", "red","darkred"))(320)
+
+riskplot<-ggplot(Amy_320_Final, aes(key,as.factor(Number), fill= Node^(-0.1))) + 
+  geom_tile()+ 
+  scale_fill_gradientn(colors = colors)+
+  xlab("")+
+  ylab("")+
+  
+    scale_color_manual(guide = FALSE, values = c(`TRUE` = "black"))+
+  theme( aspect.ratio=7/4,
+      axis.text.y = element_text(size = 2),
+      axis.text.x = element_text(size = 10,face ="bold",color = "black"),
+      panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+    # change legend font size
+      legend.text=element_text(size=2),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position="none",
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+
+
+riskplot
+
+
+ggsave(
+  file="figure.png",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 10*1.8,
+  height = 5*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+#### Tau Plot
+
+
+
+
+```{r setup, include=FALSE}
+keyA <-c(34,38,43,37,26,27,28,6,7,30,20,42,19,2,108,112,117,111,100,101,102,80,81,104,94,116,93,76)
+
+keyT <-c(32,42,11,44,21,57,2,59,19,1,5,62,24,64,106,116,85,118,95,131,76,133,93,75,79,136,98,138)
+
+keyN <-c(6,7,14,24,23,32,20,25,88,98,97,106,94,99)
+vul <- c(73,140,90,97,66,16,48,34,23,122,147,108,109,43)
+
+keyAnon <- setdiff(c(1:148),keyA)
+keyTnon <- setdiff(c(1:148),keyT)
+keyNnon <- setdiff(c(1:148),keyN)
+keyVulnon <- setdiff(c(1:148),vul)
+PatientInfo320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+
+Tau_320<-Tau_SUVR[which(Tau_SUVR$PTID %in% PatientInfo320$PTID),]
+
+
+
+for(i in 1:320){
+  
+  if (PatientInfo320[i,2] == "CN" || PatientInfo320[i,2] == "SMC" ){
+    PatientInfo320[i,2] = "NC"
+  }
+  if (PatientInfo320[i,2] == "LMCI"){
+    PatientInfo320[i,2] = "AD"
+  
+  } 
+  if (PatientInfo320[i,2] == "EMCI"){
+    PatientInfo320[i,2] = "MCI"
+  
+  }  
+}
+
+```
+
+## Tauloid
+```{r Tau}
+
+Tau_320<-Tau_320[which(Tau_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+Tau_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_320)))
+
+for (i in 1:nrow(TABLE)){
+
+Tau_320_first[i,] <- Tau_320[max(which(Tau_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(Tau_320_first) <- colnames(Tau_320)
+#Tau_320_first<-na.omit(Tau_320_first)
+
+Tau_320_Node<-Tau_320_first[,c(12:159)]
+
+Tau_320_1<-as.data.frame(rowMeans(Tau_320_Node[,keyA]))
+Tau_320_2<-as.data.frame(rowMeans(Tau_320_Node[,keyAnon]))
+
+Tau_320_3<-cbind(Tau_320_1,PatientInfo320$DX)
+Tau_320_4<-cbind(Tau_320_2,PatientInfo320$DX)
+
+```
+
+```{r}
+colnames(Tau_320_3)<-c("Node","Group")
+colnames(Tau_320_4)<-c("Node","Group")
+Tau_320_Final<-rbind(Tau_320_3,Tau_320_4)
+Tau_320_Final$key <-c(1:640)
+Tau_320_Final$Number <-c(1:640)
+for (i in 1:320){
+  Tau_320_Final[i,3] = "Key"
+  Tau_320_Final[i+320,3] = "Non-key"
+  Tau_320_Final[i,4] = i
+  Tau_320_Final[i+320,4] = i
+}
+
+
+
+Tau_key<-Tau_320_Final[c(1:320),]
+Tau_nonkey<-Tau_320_Final[c(321:640),]
+```
+
+```{r}
+
+Tau_320_Final$Group <- factor(Tau_320_Final$Group,levels= c("NC","MCI","AD"))
+Tau_320_Final<-Tau_320_Final[order(Tau_320_Final$Group),]
+
+x<-Tau_320_Final[c(1:143,287:384,483:561),4]
+
+```
+
+```{r}
+Tau_key$Number <- factor(Tau_key$Number,levels= x)
+Tau_key<-Tau_key[order(Tau_key$Number),]
+
+Tau_nonkey$Number <- factor(Tau_nonkey$Number,levels= x)
+Tau_nonkey<-Tau_nonkey[order(Tau_nonkey$Number),]
+
+
+Tau_320_Final<-rbind(Tau_key,Tau_nonkey)
+```
+## Including heatmap
+
+```{r}
+colors <- colorRampPalette(c("purple","blue", "green", "yellow", "red","darkred"))(320)
+
+riskplot<-ggplot(Tau_320_Final, aes(key,as.factor(Number), fill= Node^(-0.1))) + 
+  geom_tile()+ 
+  scale_fill_gradientn(colors = colors)+
+  xlab("")+
+  ylab("")+
+  
+    scale_color_manual(guide = FALSE, values = c(`TRUE` = "black"))+
+  theme( aspect.ratio=7/4,
+      axis.text.y = element_text(size = 2),
+      axis.text.x = element_text(size = 10,face ="bold",color = "black"),
+      panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+    # change legend font size
+      legend.text=element_text(size=2),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position="none",
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+
+
+riskplot
+
+
+ggsave(
+  file="figureTau.png",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 10*1.8,
+  height = 5*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+# FDG
+
+
+
+
+
+
+```{r setup, include=FALSE}
+keyA <-c(34,38,43,37,26,27,28,6,7,30,20,42,19,2,108,112,117,111,100,101,102,80,81,104,94,116,93,76)
+
+keyT <-c(32,42,11,44,21,57,2,59,19,1,5,62,24,64,106,116,85,118,95,131,76,133,93,75,79,136,98,138)
+
+keyN <-c(6,7,14,24,23,32,20,25,88,98,97,106,94,99)
+vul <- c(73,140,90,97,66,16,48,34,23,122,147,108,109,43)
+
+keyAnon <- setdiff(c(1:148),keyA)
+keyTnon <- setdiff(c(1:148),keyT)
+keyNnon <- setdiff(c(1:148),keyN)
+keyVulnon <- setdiff(c(1:148),vul)
+PatientInfo320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+
+FDG_320<-FDG_SUVR[which(FDG_SUVR$PTID %in% PatientInfo320$PTID),]
+
+
+
+for(i in 1:320){
+  
+  if (PatientInfo320[i,2] == "CN" || PatientInfo320[i,2] == "SMC" ){
+    PatientInfo320[i,2] = "NC"
+  }
+  if (PatientInfo320[i,2] == "LMCI"){
+    PatientInfo320[i,2] = "AD"
+  
+  } 
+  if (PatientInfo320[i,2] == "EMCI"){
+    PatientInfo320[i,2] = "MCI"
+  
+  }  
+}
+
+```
+
+## FDGloid
+```{r FDG}
+
+FDG_320<-FDG_320[which(FDG_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+FDG_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_320)))
+
+for (i in 1:nrow(TABLE)){
+
+FDG_320_first[i,] <- FDG_320[max(which(FDG_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(FDG_320_first) <- colnames(FDG_320)
+#FDG_320_first<-na.omit(FDG_320_first)
+
+FDG_320_Node<-FDG_320_first[,c(12:159)]
+
+FDG_320_1<-as.data.frame(rowMeans(FDG_320_Node[,keyA]))
+FDG_320_2<-as.data.frame(rowMeans(FDG_320_Node[,keyAnon]))
+
+FDG_320_3<-cbind(FDG_320_1,PatientInfo320$DX)
+FDG_320_4<-cbind(FDG_320_2,PatientInfo320$DX)
+
+```
+
+```{r}
+colnames(FDG_320_3)<-c("Node","Group")
+colnames(FDG_320_4)<-c("Node","Group")
+FDG_320_Final<-rbind(FDG_320_3,FDG_320_4)
+FDG_320_Final$key <-c(1:640)
+FDG_320_Final$Number <-c(1:640)
+for (i in 1:320){
+  FDG_320_Final[i,3] = "Key"
+  FDG_320_Final[i+320,3] = "Non-key"
+  FDG_320_Final[i,4] = i
+  FDG_320_Final[i+320,4] = i
+}
+
+
+
+FDG_key<-FDG_320_Final[c(1:320),]
+FDG_nonkey<-FDG_320_Final[c(321:640),]
+```
+
+```{r}
+
+FDG_320_Final$Group <- factor(FDG_320_Final$Group,levels= c("NC","MCI","AD"))
+FDG_320_Final<-FDG_320_Final[order(FDG_320_Final$Group),]
+
+x<-FDG_320_Final[c(1:143,287:384,483:561),4]
+
+```
+
+```{r}
+FDG_key$Number <- factor(FDG_key$Number,levels= x)
+FDG_key<-FDG_key[order(FDG_key$Number),]
+
+FDG_nonkey$Number <- factor(FDG_nonkey$Number,levels= x)
+FDG_nonkey<-FDG_nonkey[order(FDG_nonkey$Number),]
+
+
+FDG_320_Final<-rbind(FDG_key,FDG_nonkey)
+```
+## Including heatmap
+
+```{r}
+colors <- colorRampPalette(c("purple","blue", "green", "yellow", "red","darkred"))(320)
+
+riskplot<-ggplot(FDG_320_Final, aes(key,as.factor(Number), fill= Node^(-0.1))) + 
+  geom_tile()+ 
+  scale_fill_gradientn(colors = colors)+
+  xlab("")+
+  ylab("")+
+  
+    scale_color_manual(guide = FALSE, values = c(`TRUE` = "black"))+
+  theme( aspect.ratio=7/4,
+      axis.text.y = element_text(size = 2),
+      axis.text.x = element_text(size = 10,face ="bold",color = "black"),
+      panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+    # change legend font size
+      legend.text=element_text(size=2),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position="none",
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+
+
+riskplot
+
+
+ggsave(
+  file="figureFDG.png",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 10*1.8,
+  height = 5*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```

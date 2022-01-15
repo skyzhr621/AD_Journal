@@ -1,0 +1,156 @@
+---
+title: "z-test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+library(xlsx)
+library('lubridate')
+MRI_SUVR <- read_excel("~/Downloads/MRICortical_Thickness.xlsx")
+MRI_SUVR<-na.omit(MRI_SUVR)
+#MRI_SUVR<-na.omit(MRI_SUVR)
+```
+
+# Tau
+Dont' run this
+
+```{r forming amyloid first and last}
+TABLE<-data.frame(table(MRI_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(MRI_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+numvariable = nrow(MRI_SUVR)-sum(TABLE$Freq)-nrow(TABLE2)
+MRI_change <- as.data.frame(matrix(0,numvariable, ncol(MRI_SUVR)))
+colnames(MRI_change) <- colnames(MRI_SUVR)
+
+```
+
+```{r date format}
+startdate <- as.Date("2010-01-01")
+ok<-as.data.frame(MRI_SUVR$EXAMDATE)
+b<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+a<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+
+for (i in 1:nrow(ok)) {
+b[i,1] <- as.data.frame(toString(as.Date(paste(ok[i,1], sep=""), "%Y%m%d")))
+}
+colnames(b) <-c("Date")
+
+for(i in 1:nrow(ok)){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+colnames(a) <-c("Difference")
+}
+MRI_SUVR$SCAN <-a
+```
+```{r forming amyloid first}
+TABLE<-data.frame(table(MRI_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+MRI_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(MRI_SUVR)))
+for (i in 1:nrow(TABLE)){
+MRI_First[i,] <- as.data.frame(MRI_SUVR[min(which(MRI_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(MRI_First) <- colnames(MRI_SUVR)
+
+```
+
+```{r amyloid change}
+l =1;
+MRI_change <- as.data.frame(matrix(0,numvariable, ncol(MRI_SUVR)))
+ for (i in 1:nrow(MRI_First)) {
+   
+   # Find correspondences
+   for (j in 1:nrow(MRI_SUVR)){ 
+   
+    #If PTID is equal and time is not equal
+    if(MRI_First[i,1] == MRI_SUVR[j,1]){
+      if(MRI_First[i,163] != MRI_SUVR[j,163]) {
+    
+     # Find changes in 148 nodes
+      for (k in 1:148){
+       MRI_change[l,14+k] <- MRI_SUVR[j,14+k] - MRI_First[i,14+k];
+      }
+      # PTID and Date
+      MRI_change[l,1]<-MRI_SUVR[j,1];
+      MRI_change[l,2]<-MRI_SUVR[j,163] - MRI_First[i,163];
+      # DXs
+      MRI_change[l,3]<-MRI_SUVR[j,4];
+      MRI_change[l,4]<-MRI_First[i,4];
+      # Rest
+      MRI_change[l,5]<-MRI_First[i,5];
+      MRI_change[l,6]<-MRI_First[i,6];
+      MRI_change[l,7]<-MRI_First[i,7];
+      MRI_change[l,8]<-MRI_First[i,8];
+      MRI_change[l,9]<-MRI_First[i,9];
+      MRI_change[l,10]<-MRI_First[i,10];
+      MRI_change[l,11]<-MRI_First[i,11];
+      
+      l=l+1;
+     }
+    }
+  }
+ }
+                          
+```
+
+```{r output}
+colnames(MRI_change) <-colnames(MRI_First)
+MRI_change<- MRI_change %>% 
+  rename(
+    Time= SCANINDEX,
+    DXfirst = DX_bl,
+    DXlast = DX
+    )
+#colnames(MRI_change) <- c("PTID","Timechange", "DXfirst", "DXlast", "Age", "Gender", "Education","Ethic", "Ethiccate","Marry","APOE4")
+#write.xlsx(MRI_change, 'MRI_changed.xlsx')
+```
+```{r delete CN}
+MRI_noCN <- MRI_change[which(MRI_change$DXlast!='CN'), ]
+MRI_noCN$...1 <- NULL
+```
+
+
+
+## Amyloid Statistic
+
+#### Useful part
+```{r linear regression}
+
+fit1<-lm(MRI_noCN$`Node 147` ~ MRI_noCN$Time)
+fit1$coefficients
+plot(MRI_noCN$`Node 147` ~ MRI_noCN$Time)+
+  abline(fit1)
+```
+```{r}
+temp <- as.data.frame(MRI_noCN[,15:162])
+
+storage <- list()
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ MRI_noCN$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["MRI_noCN$Time"])
+}
+
+for(i in names(temp)){
+  fit <- lm(get(i) ~ MRI_noCN$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta", "p-value")
+```
+
+```{r}
+#write.xlsx(MRI_change, 'MRI_change.xlsx')
+#save(result,file = "MRIresult.Rda")
+```

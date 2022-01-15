@@ -1,0 +1,244 @@
+---
+title: "z-test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+library(xlsx)
+library('lubridate')
+
+Amyloid_SUVR <- read_excel("~/Downloads/Amyloid_SUVR.xlsx")
+FDG_SUVR <- read_excel("~/Downloads/FDG_SUVR.xlsx")
+Tau_SUVR <- read_excel("~/Downloads/Tau_SUVR.xlsx")
+
+#Tau_SUVR<-na.omit(Tau_SUVR)
+```
+
+## Timeline selection based on 2010
+```{r date format}
+# based on 2010 as the timeline
+startdate <- as.Date("2010-01-01")
+ok<-as.data.frame(Amyloid_SUVR$EXAMDATE)
+b<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+a<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+
+for (i in 1:nrow(ok)) {
+b[i,1] <- as.data.frame(toString(as.Date(paste(ok[i,1], sep=""), "%Y%m%d")))
+}
+colnames(b) <-c("Date")
+
+for(i in 1:nrow(ok)){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+colnames(a) <-c("Difference")
+}
+Amyloid_SUVR$SCAN <-a
+```
+
+
+```{r date format}
+# based on 2010 as the timeline
+startdate <- as.Date("2010-01-01")
+ok<-as.data.frame(Tau_SUVR$EXAMDATE)
+b<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+a<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+
+for (i in 1:nrow(ok)) {
+b[i,1] <- as.data.frame(toString(as.Date(paste(ok[i,1], sep=""), "%Y%m%d")))
+}
+colnames(b) <-c("Date")
+
+for(i in 1:nrow(ok)){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+colnames(a) <-c("Difference")
+}
+Tau_SUVR$SCAN <-a
+```
+
+```{r date format}
+FDG_SUVR<-na.omit(FDG_SUVR)
+startdate <- as.Date("2010-01-01")
+ok<-as.data.frame(FDG_SUVR$EXAMDATE)
+b<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+a<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+
+for (i in 1:nrow(ok)) {
+b[i,1] <- as.data.frame(toString(as.Date(paste(ok[i,1], sep=""), "%Y%m%d")))
+}
+colnames(b) <-c("Date")
+
+for(i in 1:nrow(ok)){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+colnames(a) <-c("Difference")
+}
+FDG_SUVR$SCAN <-a
+```
+
+## End of Editing
+
+
+
+
+## Finding Two Sets Correspondences
+
+
+```{r forming amyloid first and last}
+CorAT_Tau<- as.data.frame(matrix(0,nrow(Tau_SUVR), ncol(Tau_SUVR)))
+CorAT_Amy<- as.data.frame(matrix(0,nrow(Tau_SUVR), ncol(Tau_SUVR)))
+
+k=1;
+l=1;
+
+for (i in l:2753) {
+  for (j in k:839){
+    #if Amyloid ID= Tau ID
+    if(Amyloid_SUVR[i,1]==Tau_SUVR[j,1]){
+      # and only if Amyloid Time-Tau Time<365
+      if(abs(Amyloid_SUVR[i,2]-Tau_SUVR[j,2])<730){
+        
+          CorAT_Tau[k,] = Tau_SUVR[j,];
+          CorAT_Amy[k,] = Amyloid_SUVR[i,];
+          k = k+1;
+      }
+    }
+  }
+  l=l+1;
+}
+
+CorAT_Amy<-CorAT_Amy[apply(CorAT_Amy[,-1], 1, function(x) !all(x==0)),];
+CorAT_Tau<-CorAT_Tau[apply(CorAT_Tau[,-1], 1, function(x) !all(x==0)),];
+```
+
+```{r correlation AT}
+CorAT<- as.data.frame(matrix(0,148, 1))
+
+for(i in 1:148){
+  CorAT[i,1]<-cor((as.data.frame(CorAT_Amy[,(i+11)])),(as.data.frame(CorAT_Tau[,(i+11)])))
+}
+
+```
+
+# TN
+```{r forming amyloid first and last}
+CorTN_Tau<- as.data.frame(matrix(0,nrow(Tau_SUVR), ncol(Tau_SUVR)))
+CorTN_FDG<- as.data.frame(matrix(0,nrow(Tau_SUVR), ncol(Tau_SUVR)))
+
+k=1;
+l=1;
+
+for (i in l:3409) {
+  for (j in k:839){
+    #if Amyloid ID= Tau ID
+    if(FDG_SUVR[i,1]==Tau_SUVR[j,1]){
+      # and only if Amyloid Time-Tau Time<365
+      if(abs(FDG_SUVR[i,2]-Tau_SUVR[j,2])<730){
+        
+          CorTN_Tau[k,] = Tau_SUVR[j,]
+          CorTN_FDG[k,] = FDG_SUVR[i,]
+          k = k+1;
+      }
+    }
+  }
+  l=l+1;
+
+}
+```
+
+```{r correlation AT}
+CorTN_Tau<-CorTN_Tau[apply(CorTN_Tau[,-1], 1, function(x) !all(x==0)),]
+CorTN_FDG<-CorTN_FDG[apply(CorTN_FDG[,-1], 1, function(x) !all(x==0)),]
+
+CorTN<- as.data.frame(matrix(0,148, 1))
+
+for(i in 1:148){
+  CorTN[i,1]<-cor((as.data.frame(CorTN_Tau[,(i+11)])),(as.data.frame(CorTN_FDG[,(i+11)])))
+}
+
+```
+# AN
+```{r forming amyloid first and last}
+CorAN_Amy<- as.data.frame(matrix(0,nrow(Amyloid_SUVR), ncol(Amyloid_SUVR)))
+CorAN_FDG<- as.data.frame(matrix(0,nrow(Amyloid_SUVR), ncol(Amyloid_SUVR)))
+
+k=1;
+l=1;
+
+for (i in l:3409) {
+  for (j in k:2753){
+    #if Amyloid ID= Tau ID
+    if(FDG_SUVR[i,1]==Amyloid_SUVR[j,1]){
+      # and only if Amyloid Time-Tau Time<365
+      if(abs(FDG_SUVR[i,2]-Amyloid_SUVR[j,2])<365){
+        
+          CorAN_Amy[k,] = Amyloid_SUVR[j,]
+          CorAN_FDG[k,] = FDG_SUVR[i,]
+          k = k+1;
+      
+      }
+      
+    }
+  }
+  l=l+1;
+}
+
+```
+
+```{r correlation AT}
+CorAN_Amy<-CorAN_Amy[apply(CorAN_Amy[,-1], 1, function(x) !all(x==0)),]
+CorAN_FDG<-CorAN_FDG[apply(CorAN_FDG[,-1], 1, function(x) !all(x==0)),]
+CorAN<- as.data.frame(matrix(0,148, 1))
+
+for(i in 1:148){
+  CorAN[i,1]<-cor((as.data.frame(CorAN_Amy[,(i+11)])),(as.data.frame(CorAN_FDG[,(i+11)])))
+}
+
+```
+
+```{r combined}
+CorATN2<-cbind(CorAN, CorAT, CorTN)
+colnames(CorAN)<-c("correlationAN")
+colnames(CorAT)<-c("correlationAT")
+colnames(CorTN)<-c("correlationTN")
+
+colnames(CorATN)<-c("correlationAN", "correlationAT", "correlationTN")
+
+
+```
+
+```{r}
+CorATN_byA <- CorATN[order(CorATN$correlationAT),] 
+```
+```{r ATNplot}
+ggplot() + 
+  geom_line(data = CorATN_byA, aes(x = 1:148, y = correlationAN), color = "blue", weight = 5)+
+  geom_line(data = CorATN_byA, aes(x = 1:148, y = correlationAT), color = "red", weight = 5) +
+  geom_line(data = CorATN_byA, aes(x = 1:148, y = correlationTN), color = "green", weight = 5)+
+  ggtitle(label = "A&T&N sorted",
+              subtitle = "Blue:A&N; Red:A&T; Green:T&N")+
+  ylab("ATNrelations")+
+  xlab("Node sorted")+
+  theme(axis.x = element_blank())
+ 
+```
+```{r average tau}
+temp <- as.data.frame(Tau_change[12:159])
+tauresult<-cbind(result,(colMeans(temp)))
+colnames(tauresult)<-c("Node_beta","p_value","Mean")
+
+```
+```{r average fdg}
+temp <- as.data.frame(FDG_change[12:159])
+FDGresult<-cbind(result,(colMeans(temp)))
+colnames(FDGresult)<-c("Node_beta","p_value","Mean")
+```
+
+```{r average amy}
+temp <- as.data.frame(Amyloid_change[12:159])
+Amyresult<-cbind(result,(colMeans(temp)))
+colnames(Amyresult)<-c("Node_beta","p_value","Mean")
+```

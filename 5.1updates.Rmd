@@ -1,0 +1,575 @@
+---
+title: "5.1 new updates"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(stringr)
+library(purrr)
+library(RVenn)
+library(ggplot2)
+library(ggVennDiagram)
+library(VennDiagram)
+library(cutpointr)
+
+library(dplyr)
+library(tidyr)
+library(forcats)
+library(lemon)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+pred <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_vul.csv")
+
+```
+
+
+```{r barplot}
+pred2<-pred %>%
+  mutate(Var2 = fct_reorder(Var2, desc(Var1)))
+
+riskplot<-ggplot(pred2, aes(x=Var2, y=Var1)) +
+    geom_bar(stat="identity", fill="#619CFF", alpha=.6, width=.4) +
+    theme(axis.text.x = element_text(angle = 90), axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+xlab(NULL)+ylab("Predicted Risk")+
+  
+    theme( aspect.ratio=3/4,
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.85),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+riskplot
+```
+```{r}
+ggsave(
+  file="riskplot",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+```{r}
+pred_vul <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_vul_ATN.csv")
+pred_vul_r <-read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_vul.csv")
+pred_sen <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_sen_ATN.csv")
+pred_rand <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_rand_ATN.csv")
+pred_hub <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_hub_ATN.csv")
+```
+
+
+```{r rename column}
+colnames(pred_vul) <- c("Epicenter","A", "T","N", "Node")
+colnames(pred_hub) <- c("Epicenter","A", "T","N","Node")
+colnames(pred_rand) <- c("Epicenter","A", "T","N","Node")
+colnames(pred_sen) <- c("Epicenter","A", "T","N","Node")
+
+```
+
+```{r plot multiple line}
+
+#pred_vul2<-as.data.frame(rbind(t(pred_vul$A),t(pred_vul$T),t(pred_vul$N)))
+a<-as.data.frame(pred_vul$A)
+colnames(a)<-"pred"
+b<-as.data.frame(pred_vul$T)
+colnames(b)<-"pred"
+c<-as.data.frame(pred_vul$N)
+colnames(c)<-"pred"
+
+### add the new risk
+
+newrisk<-as.data.frame(pred_vul_r$Var1)
+colnames(newrisk)<-"pred"
+
+d<-as.data.frame(pred_vul$Node)
+colnames(d)<-"Node"
+
+### four times for node
+e<-rbind(d,d,d,d)
+
+pred_vul2<-rbind(a,b,c,newrisk)
+pred_vul2<-cbind(pred_vul2,e)
+
+### assign ATN
+pred_vul2[1:14,3]="A"
+pred_vul2[15:28,3]="T"
+pred_vul2[29:42,3]="N"
+pred_vul2[43:56,3]="P"
+
+colnames(pred_vul2)<-c("pred","Node","ATN")
+#pred_vul2$Node <- factor(pred_vul2$Node,levels = c("73", "16", "90", "140","115","66","37","95","21","108","48","34"))
+```
+
+```{r}
+
+vulplot<-ggplot(pred_vul2, aes(x = Node,y=pred, group = ATN, fill=ATN))+
+  
+  geom_point(size =3,aes(color = ATN))+
+  geom_smooth(aes(color = ATN),size=1.5)+
+  scale_fill_manual(values=c("#f8766d", "#00bfc4", "#52854C", "#FFC947"),labels = c("A", "T", "N","P"))+
+  ylab("")+
+  xlab("Vulnerable Node")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  ylim(0,2.5)+
+  xlim(15,148)+
+  
+    theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.9),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+ggsave(
+  file="tvulplot.png",
+  plot = vulplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+vulplot
+```
+
+
+
+
+### rand 
+
+
+
+```{r}
+pred_vul_r <-read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_rand_R.csv")
+pred_vul <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_rand_ATN.csv")
+colnames(pred_vul) <- c("Epicenter","A", "T","N", "Node")
+```
+
+```{r plot multiple line}
+
+#pred_vul2<-as.data.frame(rbind(t(pred_vul$A),t(pred_vul$T),t(pred_vul$N)))
+a<-as.data.frame(pred_vul$A)
+colnames(a)<-"pred"
+b<-as.data.frame(pred_vul$T)
+colnames(b)<-"pred"
+c<-as.data.frame(pred_vul$N)
+colnames(c)<-"pred"
+
+### add the new risk
+
+newrisk<-as.data.frame(pred_vul_r$Var2)
+colnames(newrisk)<-"pred"
+
+d<-as.data.frame(pred_vul$Node)
+colnames(d)<-"Node"
+
+### four times for node
+e<-rbind(d,d,d,d)
+
+pred_vul2<-rbind(a,b,c,newrisk)
+pred_vul2<-cbind(pred_vul2,e)
+
+### assign ATN
+pred_vul2[1:14,3]="A"
+pred_vul2[15:28,3]="T"
+pred_vul2[29:42,3]="N"
+pred_vul2[43:56,3]="Risk"
+
+colnames(pred_vul2)<-c("pred","Node","ATN")
+```
+
+```{r}
+
+
+randplot<-ggplot(pred_vul2, aes(x=Node,y=pred), group=ATN)+
+  geom_point(aes(color=ATN))+
+  geom_smooth(aes(color=ATN),level = 0.5)+
+  ylab("Predicted Risk")+
+  xlab("Random Node")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  ylim(0,2.5)+
+  xlim(16,148)+
+  
+    theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.9),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+randplot
+
+
+ggsave(
+  file="randplot.png",
+  plot = randplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+### sen 
+
+
+
+```{r}
+pred_vul_r <-read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_sen_R.csv")
+pred_vul <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_sen_ATN.csv")
+
+colnames(pred_vul) <- c("Epicenter","A", "T","N", "Node")
+```
+
+```{r plot multiple line}
+
+#pred_vul2<-as.data.frame(rbind(t(pred_vul$A),t(pred_vul$T),t(pred_vul$N)))
+a<-as.data.frame(pred_vul$A)
+colnames(a)<-"pred"
+b<-as.data.frame(pred_vul$T)
+colnames(b)<-"pred"
+c<-as.data.frame(pred_vul$N)
+colnames(c)<-"pred"
+
+### add the new risk
+
+newrisk<-as.data.frame(pred_vul_r$Var2)
+colnames(newrisk)<-"pred"
+
+d<-as.data.frame(pred_vul$Node)
+colnames(d)<-"Node"
+
+### four times for node
+e<-rbind(d,d,d,d)
+
+pred_vul2<-rbind(a,b,c,newrisk)
+pred_vul2<-cbind(pred_vul2,e)
+
+### assign ATN
+pred_vul2[1:14,3]="A"
+pred_vul2[15:28,3]="T"
+pred_vul2[29:42,3]="N"
+pred_vul2[43:56,3]="Risk"
+
+colnames(pred_vul2)<-c("pred","Node","ATN")
+```
+
+```{r}
+
+
+senplot<-ggplot(pred_vul2, aes(x=Node,y=pred), group=ATN)+
+  geom_point(aes(color=ATN))+
+  geom_smooth(aes(color=ATN), level=0.5)+
+  ylab("Predicted Risk")+
+  xlab("Sensitive Node")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  ylim(0,2.5)+
+  xlim(15,148)+
+  
+    theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.9),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+senplot
+ggsave(
+  file="senplot.png",
+  plot = senplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+### hub
+
+
+
+```{r}
+pred_vul_r <-read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_hub_R.csv")
+pred_vul <- read.csv("/Users/laurentzhang/Downloads/5.1 new updates/pred_onset_hub_ATN.csv")
+
+colnames(pred_vul) <- c("Epicenter","A", "T","N", "Node")
+```
+
+```{r plot multiple line}
+
+#pred_vul2<-as.data.frame(rbind(t(pred_vul$A),t(pred_vul$T),t(pred_vul$N)))
+a<-as.data.frame(pred_vul$A)
+colnames(a)<-"pred"
+b<-as.data.frame(pred_vul$T)
+colnames(b)<-"pred"
+c<-as.data.frame(pred_vul$N)
+colnames(c)<-"pred"
+
+### add the new risk
+
+newrisk<-as.data.frame(pred_vul_r$Var2)
+colnames(newrisk)<-"pred"
+
+d<-as.data.frame(pred_vul$Node)
+colnames(d)<-"Node"
+
+### four times for node
+e<-rbind(d,d,d,d)
+
+pred_vul2<-rbind(a,b,c,newrisk)
+pred_vul2<-cbind(pred_vul2,e)
+
+### assign ATN
+pred_vul2[1:14,3]="A"
+pred_vul2[15:28,3]="T"
+pred_vul2[29:42,3]="N"
+pred_vul2[43:56,3]="Risk"
+
+colnames(pred_vul2)<-c("pred","Node","ATN")
+```
+
+```{r}
+
+
+hubplot<-ggplot(pred_vul2, aes(x=Node,y=pred), group=ATN)+
+  geom_point(aes(color=ATN))+
+  geom_smooth(aes(color=ATN),level=0.5)+
+  ylab("Predicted Risk")+
+  xlab("Hub Node")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  ylim(0,2.5)+
+  
+    theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=28),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.0,.9),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+hubplot
+ggsave(
+  file="hubplot.png",
+  plot = hubplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+### ATN and R seperated
+
+##### all of A
+```{r}
+a<-cbind(Pred_hub[which(Pred_hub$ATN=="A"),],"hub")
+colnames(a)<-c("Pred","Node","ATN","type")
+b<-cbind(Pred_rand[which(Pred_rand$ATN=="A"),],"random")
+colnames(b)<-c("Pred","Node","ATN","type")
+c<-cbind(Pred_sen[which(Pred_sen$ATN=="A"),],"sensitivity")
+colnames(c)<-c("Pred","Node","ATN","type")
+d<-cbind(Pred_vul[which(Pred_vul$ATN=="A"),],"vulnerable")
+colnames(d)<-c("Pred","Node","ATN","type")
+
+A_pred<-rbind(a,b,c,d)
+
+```
+
+
+
+```{r}
+
+
+Aplot<-ggplot(A_pred, aes(x=Node,y=Pred), group=type)+
+  geom_point(aes(color=type))+
+  geom_smooth(aes(color=type),level=0.2)+
+  ylab("Predicted Risk for Amyloid")+
+  xlab("Node")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  
+    theme( aspect.ratio=3/4,
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.10,.95),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+Aplot
+```
+
+
+
+
+
+##### all of risk
+```{r}
+a<-cbind(Pred_hub[which(Pred_hub$ATN=="Risk"),],"hub")
+colnames(a)<-c("Pred","Node","ATN","type")
+b<-cbind(Pred_rand[which(Pred_rand$ATN=="Risk"),],"random")
+colnames(b)<-c("Pred","Node","ATN","type")
+c<-cbind(Pred_sen[which(Pred_sen$ATN=="Risk"),],"sensitivity")
+colnames(c)<-c("Pred","Node","ATN","type")
+d<-cbind(Pred_vul[which(Pred_vul$ATN=="Risk"),],"vulnerable")
+colnames(d)<-c("Pred","Node","ATN","type")
+
+Risk_pred<-rbind(a,b,c,d)
+
+```
+
+
+```{r}
+
+
+Riskplot<-ggplot(Risk_pred, aes(x=Node,y=Pred), group=type)+
+  geom_point(aes(color=type))+
+  geom_smooth(aes(color=type),level=0)+
+  ylab("Predicted Risk for Risk")+
+  xlab("Node")+
+  theme(axis.line = element_line(colour = "black", 
+                      size = 0.5, linetype = "solid"))+
+  
+    theme( aspect.ratio=3/4,
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.10,.95),
+    legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+
+Riskplot
+```

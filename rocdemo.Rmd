@@ -1,0 +1,70 @@
+---
+title: "rocdemo"
+output: html_document
+---
+```{r}
+
+# find a roc demo
+
+
+rocdemo <- read.csv("/Users/laurentzhang/Downloads/rocdemo.csv")
+rocdemo<-cbind(rocdemo,c(1:25))
+```
+
+```{r}
+
+rocdemo[c(1:12),3] = "Low"
+rocdemo[c(13:25),3] = "High"
+
+colnames(rocdemo)<-c("xlab","ylab","Status")
+
+```
+
+
+```{r}
+riskplot<-ggplot(rocdemo, aes(x=xlab, y=as.numeric(ylab), fill = Status)) +
+    geom_bar(position="stack", stat="identity",alpha=.6, width=0.9) +
+    #scale_fill_discrete(labels = c("A", "T", "N","Risk"))+
+#, axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"))+
+    xlab("")+ylab("")+ scale_x_discrete(labels = "")+
+    
+    theme( aspect.ratio=3/4,
+           #text = element_text(size=30,face ="bold"),
+      axis.text.y = element_text(size = 30),
+      axis.title.x = element_text(size = 80,face ="bold"),
+      panel.border = element_rect(colour = "black", fill=NA, size=1),
+    # change legend font size
+      legend.text=element_text(size=80),
+    # Remove panel grid lines
+    
+    
+    #panel.grid.major = element_blank(),
+    #panel.grid.minor = element_blank(),
+  # Remove panel background
+    panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.02,.8),
+    legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+riskplot
+
+
+
+ggsave(
+  file="rocdemo.png",
+  plot = riskplot,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 10*1.8,
+  height = 10*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```

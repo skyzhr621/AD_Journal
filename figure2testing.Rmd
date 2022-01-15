@@ -1,0 +1,827 @@
+## FDG
+### Seperate by the 3 group 
+```{r}
+Tau_320<-Tau_SUVR[which(Tau_SUVR$PTID %in% PatientInfo320$PTID),]
+Amy_320<-Amyloid_SUVR[which(Amyloid_SUVR$PTID %in% PatientInfo320$PTID),]
+FDG_320<-FDG_SUVR[which(FDG_SUVR$PTID %in% PatientInfo320$PTID),]
+
+new<-FDG_SUVR[which(FDG_SUVR$PTID %in% Amyloid_SUVR$PTID),]
+new2<-FDG_SUVR[which(new$PTID %in% Tau_SUVR$PTID),]
+
+```
+#### AD
+```{r only ad group}
+
+for(i in 1:320){
+  
+  if (FDG_320[i,4] == "CN" || FDG_320[i,4] == "SMC" ){
+    FDG_320[i,4] = "NC"
+  }
+  if (FDG_320[i,4] == "LMCI"){
+    FDG_320[i,4] = "AD"
+  
+  } 
+  if (FDG_320[i,4] == "EMCI"){
+    FDG_320[i,4] = "MCI"
+  
+  }  
+}
+
+
+FDG_320_first<-FDG_320[which(FDG_320$DX == "AD"),]
+
+
+FDG_320_Node<-FDG_320_first[,c(12:159)]
+
+FDG_320_1<-as.data.frame(rowMeans(FDG_320_Node[,a]))
+FDG_320_2<-as.data.frame(rowMeans(FDG_320_Node[,b]))
+FDG_320_3<-as.data.frame(rowMeans(FDG_320_Node[,c]))
+FDG_320_4<-as.data.frame(rowMeans(FDG_320_Node[,d]))
+FDG_320_5<-as.data.frame(rowMeans(FDG_320_Node[,e]))
+FDG_320_6<-as.data.frame(rowMeans(FDG_320_Node[,f]))
+
+
+colnames(FDG_320_1)<-c("Node")
+colnames(FDG_320_2)<-c("Node")
+colnames(FDG_320_3)<-c("Node")
+colnames(FDG_320_4)<-c("Node")
+colnames(FDG_320_5)<-c("Node")
+colnames(FDG_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(FDG_320_1,FDG_320_2,FDG_320_3,FDG_320_4,FDG_320_5,FDG_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(FDG_320_1)*6)
+
+for(i in 1:nrow(FDG_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(FDG_320_1),2] = "2"
+  FDG_Braak1[i+nrow(FDG_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(FDG_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(FDG_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(FDG_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="FDG_AD")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="FDGbraakAD.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+#### MCI
+```{r only ad group}
+
+
+FDG_320_first<-FDG_320[which(FDG_320$DX == "MCI"),]
+
+
+FDG_320_Node<-FDG_320_first[,c(12:159)]
+
+FDG_320_1<-as.data.frame(rowMeans(FDG_320_Node[,a]))
+FDG_320_2<-as.data.frame(rowMeans(FDG_320_Node[,b]))
+FDG_320_3<-as.data.frame(rowMeans(FDG_320_Node[,c]))
+FDG_320_4<-as.data.frame(rowMeans(FDG_320_Node[,d]))
+FDG_320_5<-as.data.frame(rowMeans(FDG_320_Node[,e]))
+FDG_320_6<-as.data.frame(rowMeans(FDG_320_Node[,f]))
+
+
+colnames(FDG_320_1)<-c("Node")
+colnames(FDG_320_2)<-c("Node")
+colnames(FDG_320_3)<-c("Node")
+colnames(FDG_320_4)<-c("Node")
+colnames(FDG_320_5)<-c("Node")
+colnames(FDG_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(FDG_320_1,FDG_320_2,FDG_320_3,FDG_320_4,FDG_320_5,FDG_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(FDG_320_1)*6)
+
+for(i in 1:nrow(FDG_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(FDG_320_1),2] = "2"
+  FDG_Braak1[i+nrow(FDG_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(FDG_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(FDG_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(FDG_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="FDG_MCI")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="FDGbraakMCI.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+#### NC
+```{r only ad group}
+
+
+FDG_320_first<-FDG_320[which(FDG_320$DX == "NC"),]
+
+
+FDG_320_Node<-FDG_320_first[,c(12:159)]
+
+FDG_320_1<-as.data.frame(rowMeans(FDG_320_Node[,a]))
+FDG_320_2<-as.data.frame(rowMeans(FDG_320_Node[,b]))
+FDG_320_3<-as.data.frame(rowMeans(FDG_320_Node[,c]))
+FDG_320_4<-as.data.frame(rowMeans(FDG_320_Node[,d]))
+FDG_320_5<-as.data.frame(rowMeans(FDG_320_Node[,e]))
+FDG_320_6<-as.data.frame(rowMeans(FDG_320_Node[,f]))
+
+
+colnames(FDG_320_1)<-c("Node")
+colnames(FDG_320_2)<-c("Node")
+colnames(FDG_320_3)<-c("Node")
+colnames(FDG_320_4)<-c("Node")
+colnames(FDG_320_5)<-c("Node")
+colnames(FDG_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(FDG_320_1,FDG_320_2,FDG_320_3,FDG_320_4,FDG_320_5,FDG_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(FDG_320_1)*6)
+
+for(i in 1:nrow(FDG_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(FDG_320_1),2] = "2"
+  FDG_Braak1[i+nrow(FDG_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(FDG_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(FDG_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(FDG_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="FDG_NC")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="FDGbraakNC.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+### Tau
+
+
+#### AD
+```{r only ad group}
+
+Tau_320<-Tau_SUVR[which(Tau_SUVR$PTID %in% PatientInfo320$PTID),]
+Amy_320<-Amyloid_SUVR[which(Amyloid_SUVR$PTID %in% PatientInfo320$PTID),]
+FDG_320<-FDG_SUVR[which(FDG_SUVR$PTID %in% PatientInfo320$PTID),]
+
+for(i in 1:320){
+  
+  if (Tau_320[i,4] == "CN" || Tau_320[i,4] == "SMC" ){
+    Tau_320[i,4] = "NC"
+  }
+  if (Tau_320[i,4] == "LMCI"){
+    Tau_320[i,4] = "AD"
+  
+  } 
+  if (Tau_320[i,4] == "EMCI"){
+    Tau_320[i,4] = "MCI"
+  
+  }  
+}
+
+
+Tau_320_first<-Tau_320[which(Tau_320$DX == "AD"),]
+
+
+Tau_320_Node<-Tau_320_first[,c(12:159)]
+
+Tau_320_1<-as.data.frame(rowMeans(Tau_320_Node[,a]))
+Tau_320_2<-as.data.frame(rowMeans(Tau_320_Node[,b]))
+Tau_320_3<-as.data.frame(rowMeans(Tau_320_Node[,c]))
+Tau_320_4<-as.data.frame(rowMeans(Tau_320_Node[,d]))
+Tau_320_5<-as.data.frame(rowMeans(Tau_320_Node[,e]))
+Tau_320_6<-as.data.frame(rowMeans(Tau_320_Node[,f]))
+
+
+colnames(Tau_320_1)<-c("Node")
+colnames(Tau_320_2)<-c("Node")
+colnames(Tau_320_3)<-c("Node")
+colnames(Tau_320_4)<-c("Node")
+colnames(Tau_320_5)<-c("Node")
+colnames(Tau_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(Tau_320_1,Tau_320_2,Tau_320_3,Tau_320_4,Tau_320_5,Tau_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(Tau_320_1)*6)
+
+for(i in 1:nrow(Tau_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(Tau_320_1),2] = "2"
+  FDG_Braak1[i+nrow(Tau_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(Tau_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(Tau_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(Tau_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Tau_AD")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="TaubraakAD.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+#### MCI
+```{r only ad group}
+
+
+Tau_320_first<-Tau_320[which(Tau_320$DX == "MCI"),]
+
+
+Tau_320_Node<-Tau_320_first[,c(12:159)]
+
+Tau_320_1<-as.data.frame(rowMeans(Tau_320_Node[,a]))
+Tau_320_2<-as.data.frame(rowMeans(Tau_320_Node[,b]))
+Tau_320_3<-as.data.frame(rowMeans(Tau_320_Node[,c]))
+Tau_320_4<-as.data.frame(rowMeans(Tau_320_Node[,d]))
+Tau_320_5<-as.data.frame(rowMeans(Tau_320_Node[,e]))
+Tau_320_6<-as.data.frame(rowMeans(Tau_320_Node[,f]))
+
+
+colnames(Tau_320_1)<-c("Node")
+colnames(Tau_320_2)<-c("Node")
+colnames(Tau_320_3)<-c("Node")
+colnames(Tau_320_4)<-c("Node")
+colnames(Tau_320_5)<-c("Node")
+colnames(Tau_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(Tau_320_1,Tau_320_2,Tau_320_3,Tau_320_4,Tau_320_5,Tau_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(Tau_320_1)*6)
+
+for(i in 1:nrow(Tau_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(Tau_320_1),2] = "2"
+  FDG_Braak1[i+nrow(Tau_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(Tau_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(Tau_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(Tau_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Tau_MCI")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="TaubraakMCI.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+#### NC
+```{r only ad group}
+
+
+Tau_320_first<-Tau_320[which(Tau_320$DX == "NC"),]
+
+
+Tau_320_Node<-Tau_320_first[,c(12:159)]
+
+Tau_320_1<-as.data.frame(rowMeans(Tau_320_Node[,a]))
+Tau_320_2<-as.data.frame(rowMeans(Tau_320_Node[,b]))
+Tau_320_3<-as.data.frame(rowMeans(Tau_320_Node[,c]))
+Tau_320_4<-as.data.frame(rowMeans(Tau_320_Node[,d]))
+Tau_320_5<-as.data.frame(rowMeans(Tau_320_Node[,e]))
+Tau_320_6<-as.data.frame(rowMeans(Tau_320_Node[,f]))
+
+
+colnames(Tau_320_1)<-c("Node")
+colnames(Tau_320_2)<-c("Node")
+colnames(Tau_320_3)<-c("Node")
+colnames(Tau_320_4)<-c("Node")
+colnames(Tau_320_5)<-c("Node")
+colnames(Tau_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(Tau_320_1,Tau_320_2,Tau_320_3,Tau_320_4,Tau_320_5,Tau_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(Tau_320_1)*6)
+
+for(i in 1:nrow(Tau_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(Tau_320_1),2] = "2"
+  FDG_Braak1[i+nrow(Tau_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(Tau_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(Tau_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(Tau_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Tau_NC")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="TaubraakNC.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+
+
+
+
+
+
+### Amyloid
+
+
+#### AD
+```{r only ad group}
+Amy_320<-Amyloid_SUVR[which(Amyloid_SUVR$PTID %in% PatientInfo320$PTID),]
+FDG_320<-FDG_SUVR[which(FDG_SUVR$PTID %in% PatientInfo320$PTID),]
+
+for(i in 1:320){
+  
+  if (Amy_320[i,4] == "CN" || Amy_320[i,4] == "SMC" ){
+    Amy_320[i,4] = "NC"
+  }
+  if (Amy_320[i,4] == "LMCI"){
+    Amy_320[i,4] = "AD"
+  
+  } 
+  if (Amy_320[i,4] == "EMCI"){
+    Amy_320[i,4] = "MCI"
+  
+  }  
+}
+
+
+Amy_320_first<-Amy_320[which(Amy_320$DX == "AD"),]
+
+
+Amy_320_Node<-Amy_320_first[,c(12:159)]
+
+Amy_320_1<-as.data.frame(rowMeans(Amy_320_Node[,a]))
+Amy_320_2<-as.data.frame(rowMeans(Amy_320_Node[,b]))
+Amy_320_3<-as.data.frame(rowMeans(Amy_320_Node[,c]))
+Amy_320_4<-as.data.frame(rowMeans(Amy_320_Node[,d]))
+Amy_320_5<-as.data.frame(rowMeans(Amy_320_Node[,e]))
+Amy_320_6<-as.data.frame(rowMeans(Amy_320_Node[,f]))
+
+
+colnames(Amy_320_1)<-c("Node")
+colnames(Amy_320_2)<-c("Node")
+colnames(Amy_320_3)<-c("Node")
+colnames(Amy_320_4)<-c("Node")
+colnames(Amy_320_5)<-c("Node")
+colnames(Amy_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(Amy_320_1,Amy_320_2,Amy_320_3,Amy_320_4,Amy_320_5,Amy_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(Amy_320_1)*6)
+
+for(i in 1:nrow(Amy_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(Amy_320_1),2] = "2"
+  FDG_Braak1[i+nrow(Amy_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(Amy_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(Amy_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(Amy_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Amyloid_AD")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="AmybraakAD.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+#### MCI
+```{r only ad group}
+
+
+Amy_320_first<-Amy_320[which(Amy_320$DX == "MCI"),]
+
+
+Amy_320_Node<-Amy_320_first[,c(12:159)]
+
+Amy_320_1<-as.data.frame(rowMeans(Amy_320_Node[,a]))
+Amy_320_2<-as.data.frame(rowMeans(Amy_320_Node[,b]))
+Amy_320_3<-as.data.frame(rowMeans(Amy_320_Node[,c]))
+Amy_320_4<-as.data.frame(rowMeans(Amy_320_Node[,d]))
+Amy_320_5<-as.data.frame(rowMeans(Amy_320_Node[,e]))
+Amy_320_6<-as.data.frame(rowMeans(Amy_320_Node[,f]))
+
+
+colnames(Amy_320_1)<-c("Node")
+colnames(Amy_320_2)<-c("Node")
+colnames(Amy_320_3)<-c("Node")
+colnames(Amy_320_4)<-c("Node")
+colnames(Amy_320_5)<-c("Node")
+colnames(Amy_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(Amy_320_1,Amy_320_2,Amy_320_3,Amy_320_4,Amy_320_5,Amy_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(Amy_320_1)*6)
+
+for(i in 1:nrow(Amy_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(Amy_320_1),2] = "2"
+  FDG_Braak1[i+nrow(Amy_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(Amy_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(Amy_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(Amy_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Amyloid_MCI")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="AmybraakMCI.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+#### NC
+```{r only ad group}
+
+
+Amy_320_first<-Amy_320[which(Amy_320$DX == "NC"),]
+
+
+Amy_320_Node<-Amy_320_first[,c(12:159)]
+
+Amy_320_1<-as.data.frame(rowMeans(Amy_320_Node[,a]))
+Amy_320_2<-as.data.frame(rowMeans(Amy_320_Node[,b]))
+Amy_320_3<-as.data.frame(rowMeans(Amy_320_Node[,c]))
+Amy_320_4<-as.data.frame(rowMeans(Amy_320_Node[,d]))
+Amy_320_5<-as.data.frame(rowMeans(Amy_320_Node[,e]))
+Amy_320_6<-as.data.frame(rowMeans(Amy_320_Node[,f]))
+
+
+colnames(Amy_320_1)<-c("Node")
+colnames(Amy_320_2)<-c("Node")
+colnames(Amy_320_3)<-c("Node")
+colnames(Amy_320_4)<-c("Node")
+colnames(Amy_320_5)<-c("Node")
+colnames(Amy_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(Amy_320_1,Amy_320_2,Amy_320_3,Amy_320_4,Amy_320_5,Amy_320_6)
+
+FDG_Braak1$Stage<-c(1:nrow(Amy_320_1)*6)
+
+for(i in 1:nrow(Amy_320_1)){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+nrow(Amy_320_1),2] = "2"
+  FDG_Braak1[i+nrow(Amy_320_1)*2,2] = "3"
+  FDG_Braak1[i+nrow(Amy_320_1)*3,2] = "4"
+  FDG_Braak1[i+nrow(Amy_320_1)*4,2] = "5"
+  FDG_Braak1[i+nrow(Amy_320_1)*5,2] = "6"
+}
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Amyloid_NC")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="AmybraakNC.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```

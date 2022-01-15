@@ -1,0 +1,187 @@
+---
+title: "figure5b"
+output: html_document
+---
+```{r A VS T}
+Patient320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+
+prefdg<-read.csv("/Users/laurentzhang/Downloads/final_firstscan_320.csv")
+FDG_First<-as.data.frame(colMeans(prefdg[,c(297:444)]))
+
+rownames(FDG_First)<-c(1:148)
+colnames(FDG_First)<-("Value")
+```
+
+```{r}
+
+
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+Amyloid_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_First[i,] <- as.data.frame(Amyloid_SUVR[min(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Amyloid_First) <- colnames(Amyloid_SUVR)
+
+
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+Tau_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_First[i,] <- as.data.frame(Tau_SUVR[min(which(Tau_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Tau_First) <- colnames(Tau_SUVR)
+
+```
+## new amy and tau
+```{r}
+#FDG_new<-FDG_First[which(FDG_First$PTID %in% Patient320$PTID),]
+Tau_new<-Tau_First[which(Tau_First$PTID %in% Patient320$PTID),]
+Amyloid_new<-Amyloid_First[which(Amyloid_First$PTID %in% Patient320$PTID),]
+```
+
+
+## finish here, next step is find the corresponding
+
+```{r}
+#Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320_ATN.csv")
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320.csv")
+
+Amyloid_Last<-as.data.frame(colMeans(Pred_updated[,c(1:148)]))
+Tau_Last<-as.data.frame(colMeans(Pred_updated[,c(149:296)]))
+FDG_Last<-as.data.frame(colMeans(Pred_updated[,c(297:444)]))
+
+
+Amyloid_First<-as.data.frame(colMeans(Amyloid_new[,c(12:159)]))
+Tau_First<-as.data.frame(colMeans(Tau_new[,c(12:159)]))
+
+
+```
+
+
+# find changes 
+```{r}
+Amyloid_change<-(Amyloid_Last-Amyloid_First)/Amyloid_First
+Tau_change<-(Tau_Last-Tau_First)/Tau_First
+FDG_change<-(FDG_Last-FDG_First)/FDG_First
+
+rownames(Amyloid_change)<-c(1:148)
+rownames(Tau_change)<-c(1:148)
+rownames(FDG_change)<-c(1:148)
+```
+## add atn
+```{r}
+Amyloid_change<-cbind(Amyloid_change,c(1:148))
+Tau_change<-cbind(Tau_change,c(1:148))
+FDG_change<-cbind(FDG_change,c(1:148))
+```
+```{r}
+colnames(Amyloid_change) <- c("Value","ATN")
+colnames(Tau_change) <- c("Value","ATN")
+colnames(FDG_change) <- c("Value","ATN")
+
+Amyloid_change$ATN <-c("A")
+Tau_change$ATN <-c("T")
+FDG_change$ATN <-c("N")
+
+
+
+```
+
+```{r we need a order by predicted risk}
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred<-as.data.frame(colMeans(pred22[,c(3:150)]))
+
+rownames(pred)<-c(1:148)
+pred<-cbind(pred,c(1:148))
+colnames(pred)<-c("Value","Node")
+
+pred <- as.data.frame(pred [order(pred$Value),])
+a<-pred$Node
+
+Amyloid_change<-cbind(Amyloid_change,c(1:148))
+Tau_change <-cbind(Tau_change,c(1:148))
+FDG_change <-cbind(FDG_change,c(1:148))
+
+colnames(Amyloid_change) <- c("Value","ATN","Sort")
+colnames(Tau_change) <- c("Value","ATN","Sort")
+colnames(FDG_change) <- c("Value","ATN","Sort")
+FDG_change$Value <- FDG_change$Value*(-1)
+```
+
+```{r order graph}
+
+Amyloid_change$Sort <- factor(Amyloid_change$Sort,levels= a)
+Tau_change$Sort <- factor(Tau_change$Sort,levels= a)
+FDG_change$Sort <- factor(FDG_change$Sort,levels= a)
+
+all_change <-rbind(Amyloid_change,Tau_change,FDG_change)
+
+all_change$Value<-all_change$Value*100
+```
+
+```{r}
+
+library(forcats)
+f<-factor(all_change$ATN, levels = c("A", "T", "N"))
+all_change$ATN<-fct_relevel(f)
+
+ATdiff<- ggplot(all_change, aes(x =  as.numeric(Sort), y = Value, group = ATN, color = ATN)) +
+  geom_point(size =2, aes(color = ATN))+
+  geom_smooth(size=1.5,aes(color = ATN))+
+      
+  labs(y="Relative changes (%)", x="Nodes ordered by predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(0,148) + 
+  ylim(min(all_change$Value),10.5)+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+  
+      axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.01,.88),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+ATdiff
+
+ ggsave(
+  file="ATN change.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+```
+
+```
+
+
+
+

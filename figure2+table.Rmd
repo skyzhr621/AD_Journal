@@ -1,0 +1,1306 @@
+---
+title: "all subject"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+PatientInfo320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+```
+```{r}
+Tau_320<-Tau_SUVR[which(Tau_SUVR$PTID %in% PatientInfo320$PTID),]
+Amy_320<-Amyloid_SUVR[which(Amyloid_SUVR$PTID %in% PatientInfo320$PTID),]
+FDG_320<-FDG_SUVR[which(FDG_SUVR$PTID %in% PatientInfo320$PTID),]
+
+new<-FDG_SUVR[which(FDG_SUVR$PTID %in% Amyloid_SUVR$PTID),]
+new2<-FDG_SUVR[which(new$PTID %in% Tau_SUVR$PTID),]
+
+```
+```{r assign braak stage}
+a<-c(32,106)
+b<-c(66,140)
+c<-c(21,22,23,61,95,96,97,135)
+d<-c(2,
+     6,
+     7,
+     8,
+     9,
+    10,
+    17,
+    18,
+    31,
+    34,
+    35,
+    36,
+    37,
+    38,
+    43,
+    44,
+    47,
+    48,
+    49,
+    50,
+    51,
+    70,
+    71,
+    72,
+    73,
+    74,
+    76,
+    80,
+    81,
+    82,
+    83,
+    84,
+    91,
+    92,
+   105,
+   108,
+   109,
+   110,
+   111,
+   112,
+   117,
+   118,
+   121,
+   122,
+   123,
+   124,
+   125,
+   144,
+   145,
+   146,
+   147,
+   148)
+e<-c(1,5,
+    12,
+    13,
+    14,
+    15,
+    19,
+    20,
+    24,
+    25,
+    26,
+    27,
+    28,
+    30,
+    33,
+    39,
+    40,
+    41,
+    52,
+    53,
+    54,
+    55,
+    56,
+    59,
+    60,
+    62,
+    63,
+    64,
+    65,
+    75,
+    79,
+    86,
+    87,
+    88,
+    89,
+    93,
+    94,
+    98,
+    99,
+   100,
+   101,
+   102,
+   104,
+   107,
+   113,
+   114,
+   115,
+   126,
+   127,
+   128,
+   129,
+   130,
+   133,
+   134,
+   136,
+   137,
+   138,
+   139)
+
+f<-c(3,
+     4,
+    11,
+    16,
+    29,
+    42,
+    45,
+    46,
+    57,
+    58,
+    67,
+    68,
+    69,
+    77,
+    78,
+    85,
+    90,
+   103,
+   116,
+   119,
+   120,
+   131,
+   132,
+   141,
+   142,
+   143)
+
+```
+
+## recharge for nodes Amy
+```{r}
+
+Amy_320<-Amy_320[which(Amy_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+Amy_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amy_320)))
+
+for (i in 1:nrow(TABLE)){
+
+Amy_320_first[i,] <- Amy_320[max(which(Amy_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(Amy_320_first) <- colnames(Amy_320)
+#Amy_320_first<-na.omit(Amy_320_first)
+
+Amy_320_Node<-Amy_320_first[,c(12:159)]
+
+Amy_320_1<-as.data.frame(rowMeans(Amy_320_Node[,a]))
+Amy_320_2<-as.data.frame(rowMeans(Amy_320_Node[,b]))
+Amy_320_3<-as.data.frame(rowMeans(Amy_320_Node[,c]))
+Amy_320_4<-as.data.frame(rowMeans(Amy_320_Node[,d]))
+Amy_320_5<-as.data.frame(rowMeans(Amy_320_Node[,e]))
+Amy_320_6<-as.data.frame(rowMeans(Amy_320_Node[,f]))
+
+
+colnames(Amy_320_1)<-c("Node")
+colnames(Amy_320_2)<-c("Node")
+colnames(Amy_320_3)<-c("Node")
+colnames(Amy_320_4)<-c("Node")
+colnames(Amy_320_5)<-c("Node")
+colnames(Amy_320_6)<-c("Node")
+
+Amy_Braak1<-rbind(Amy_320_1,Amy_320_2,Amy_320_3,Amy_320_4,Amy_320_5,Amy_320_6)
+
+Amy_Braak1$Stage<-c(1:1920)
+
+for(i in 1:320){
+  Amy_Braak1[i,2] = "1"
+  Amy_Braak1[i+320,2] = "2"
+  Amy_Braak1[i+640,2] = "3"
+  Amy_Braak1[i+960,2] = "4"
+  Amy_Braak1[i+1280,2] = "5"
+  Amy_Braak1[i+1600,2] = "6"
+}
+
+
+```
+```{r}
+# this is the graph
+Amy_Braak1$DX <- factor(Amy_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(Amy_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Amyloid")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="Amybraak.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+### move on to tau
+
+
+```{r}
+
+Tau_320<-Tau_320[which(Tau_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+Tau_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_320)))
+
+for (i in 1:nrow(TABLE)){
+
+Tau_320_first[i,] <- Tau_320[max(which(Tau_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(Tau_320_first) <- colnames(Tau_320)
+#Tau_320_first<-na.omit(Tau_320_first)
+
+Tau_320_Node<-Tau_320_first[,c(12:159)]
+
+Tau_320_1<-as.data.frame(rowMeans(Tau_320_Node[,a]))
+Tau_320_2<-as.data.frame(rowMeans(Tau_320_Node[,b]))
+Tau_320_3<-as.data.frame(rowMeans(Tau_320_Node[,c]))
+Tau_320_4<-as.data.frame(rowMeans(Tau_320_Node[,d]))
+Tau_320_5<-as.data.frame(rowMeans(Tau_320_Node[,e]))
+Tau_320_6<-as.data.frame(rowMeans(Tau_320_Node[,f]))
+
+
+colnames(Tau_320_1)<-c("Node")
+colnames(Tau_320_2)<-c("Node")
+colnames(Tau_320_3)<-c("Node")
+colnames(Tau_320_4)<-c("Node")
+colnames(Tau_320_5)<-c("Node")
+colnames(Tau_320_6)<-c("Node")
+
+Tau_Braak1<-rbind(Tau_320_1,Tau_320_2,Tau_320_3,Tau_320_4,Tau_320_5,Tau_320_6)
+
+Tau_Braak1$Stage<-c(1:1920)
+
+for(i in 1:320){
+  Tau_Braak1[i,2] = "1"
+  Tau_Braak1[i+320,2] = "2"
+  Tau_Braak1[i+640,2] = "3"
+  Tau_Braak1[i+960,2] = "4"
+  Tau_Braak1[i+1280,2] = "5"
+  Tau_Braak1[i+1600,2] = "6"
+}
+
+
+```
+```{r}
+# this is the graph
+Tau_Braak1$DX <- factor(Tau_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(Tau_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Tau")+ theme_bw() +  
+    ylim(0.9,3.1)+
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="Taubraak.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+### FDG
+
+
+```{r}
+
+FDG_320<-FDG_320[which(FDG_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+FDG_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_320)))
+
+for (i in 1:nrow(TABLE)){
+
+FDG_320_first[i,] <- FDG_320[max(which(FDG_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(FDG_320_first) <- colnames(FDG_320)
+#FDG_320_first<-na.omit(FDG_320_first)
+
+```
+
+
+```{r change 320 data}
+FDG_320_Node<-FDG_320_first[,c(12:159)]
+
+FDG_320_1<-as.data.frame(rowMeans(FDG_320_Node[,a]))
+FDG_320_2<-as.data.frame(rowMeans(FDG_320_Node[,b]))
+FDG_320_3<-as.data.frame(rowMeans(FDG_320_Node[,c]))
+FDG_320_4<-as.data.frame(rowMeans(FDG_320_Node[,d]))
+FDG_320_5<-as.data.frame(rowMeans(FDG_320_Node[,e]))
+FDG_320_6<-as.data.frame(rowMeans(FDG_320_Node[,f]))
+
+
+colnames(FDG_320_1)<-c("Node")
+colnames(FDG_320_2)<-c("Node")
+colnames(FDG_320_3)<-c("Node")
+colnames(FDG_320_4)<-c("Node")
+colnames(FDG_320_5)<-c("Node")
+colnames(FDG_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(FDG_320_1,FDG_320_2,FDG_320_3,FDG_320_4,FDG_320_5,FDG_320_6)
+
+FDG_Braak1$Stage<-c(1:1920)
+
+for(i in 1:320){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+320,2] = "2"
+  FDG_Braak1[i+640,2] = "3"
+  FDG_Braak1[i+960,2] = "4"
+  FDG_Braak1[i+1280,2] = "5"
+  FDG_Braak1[i+1600,2] = "6"
+}
+
+
+
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  ylim(0.5,1.15)+
+  labs(y="FDG")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="FDGbraak.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+### amy new
+```{r}
+
+x<-c(1,2,5,10,11,19,21,22,23,24,31,34,37,75,76,79,84,85,93,95,96,97,98,105,108,111)
+
+y<-c(3,6,7,8,9,18,22,24,38,47,49,50,60,61,64,65,71,72,77,80,81,82,83,92,96,98,112,121,123,124,134,135,138,139,145,146,30,74)
+
+z<-c(4,12,13,14,15,16,17,20,25,26,27,28,29,32,33,35,36,39,40,41,42,43,44,45,46,48,51,52,53,54,55,56,57,58,59,62,63,66,67,68,69,70,73,74,78,86,87,88,89,90,91,94,99,100,101,102,103,106,107,109,110,113,114,115,116,117,118,119,120,122,125,126,127,128,129,130,131,132,133,136,137,140,141,142,143,144,147,148)
+```
+
+
+
+## recharge for nodes Amy
+```{r}
+
+Amy_320<-Amy_320[which(Amy_320$PTID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+Amy_320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amy_320)))
+
+for (i in 1:nrow(TABLE)){
+
+Amy_320_first[i,] <- Amy_320[max(which(Amy_320$PTID == TABLE$Var1[i])), ]
+
+
+}
+colnames(Amy_320_first) <- colnames(Amy_320)
+#Amy_320_first<-na.omit(Amy_320_first)
+
+Amy_320_Node<-Amy_320_first[,c(12:159)]
+
+Amy_320_1<-as.data.frame(rowMeans(Amy_320_Node[,x]))
+Amy_320_2<-as.data.frame(rowMeans(Amy_320_Node[,y]))
+Amy_320_3<-as.data.frame(rowMeans(Amy_320_Node[,z]))
+
+
+colnames(Amy_320_1)<-c("Node")
+colnames(Amy_320_2)<-c("Node")
+colnames(Amy_320_3)<-c("Node")
+
+
+Amy_Braak1<-rbind(Amy_320_1,Amy_320_2,Amy_320_3)
+
+Amy_Braak1$Stage<-c(1:960)
+
+for(i in 1:320){
+  Amy_Braak1[i,2] = "1"
+  Amy_Braak1[i+320,2] = "2"
+  Amy_Braak1[i+640,2] = "3"
+}
+
+
+```
+```{r}
+# this is the graph
+Amy_Braak1$DX <- factor(Amy_Braak1$Stage,levels= c("1","2","3"))
+Amybraak<- ggplot(Amy_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Amyloid")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="Amybraakspraed.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+### Seperate by the AD group 
+
+
+
+```{r only ad group}
+
+for(i in 1:320){
+  
+  if (FDG_320[i,4] == "EMCI" || FDG_320[i,4] == "CN" || FDG_320[i,4] == "SMC" ){
+    FDG_320[i,4] = "NC"
+  }
+  if (FDG_320[i,4] == "LMCI"){
+    FDG_320[i,4] = "AD"
+  
+  } 
+  if (FDG_320[i,4] == "EMCI"){
+    FDG_320[i,4] = "MCI"
+  
+  }  
+}
+
+
+FDG_320_first<-FDG_320[which(FDG_320$DX == "NC"),]
+
+
+FDG_320_Node<-FDG_320_first[,c(12:159)]
+
+FDG_320_1<-as.data.frame(rowMeans(FDG_320_Node[,a]))
+FDG_320_2<-as.data.frame(rowMeans(FDG_320_Node[,b]))
+FDG_320_3<-as.data.frame(rowMeans(FDG_320_Node[,c]))
+FDG_320_4<-as.data.frame(rowMeans(FDG_320_Node[,d]))
+FDG_320_5<-as.data.frame(rowMeans(FDG_320_Node[,e]))
+FDG_320_6<-as.data.frame(rowMeans(FDG_320_Node[,f]))
+
+
+colnames(FDG_320_1)<-c("Node")
+colnames(FDG_320_2)<-c("Node")
+colnames(FDG_320_3)<-c("Node")
+colnames(FDG_320_4)<-c("Node")
+colnames(FDG_320_5)<-c("Node")
+colnames(FDG_320_6)<-c("Node")
+
+FDG_Braak1<-rbind(FDG_320_1,FDG_320_2,FDG_320_3,FDG_320_4,FDG_320_5,FDG_320_6)
+
+FDG_Braak1$Stage<-c(1:1920)
+
+for(i in 1:320){
+  FDG_Braak1[i,2] = "1"
+  FDG_Braak1[i+320,2] = "2"
+  FDG_Braak1[i+640,2] = "3"
+  FDG_Braak1[i+960,2] = "4"
+  FDG_Braak1[i+1280,2] = "5"
+  FDG_Braak1[i+1600,2] = "6"
+}
+
+```
+```{r}
+# this is the graph
+FDG_Braak1$DX <- factor(FDG_Braak1$Stage,levels= c("1","2","3","4","5","6"))
+Amybraak<- ggplot(FDG_Braak1, aes(x = Stage, y =Node, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="FDG")+ theme_bw() +  
+  #scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybraak
+ 
+ 
+ ggsave(
+  file="FDGbraak.png",
+  plot = Amybraak,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+### Ends here 
+
+
+```{r}
+PTID_Amy1 <- as.data.frame(Amyloid_SUVR$PTID)
+PTID_Amy2 <-as.data.frame(Amyloid_SUVR$AGE)
+PTID_Amy3 <-as.data.frame(Amyloid_SUVR$PTEDUCAT)
+PTID_Amy4 <-as.data.frame(Amyloid_SUVR$PTGENDER)
+PTID_Amy5 <- as.data.frame(Amyloid_SUVR$DX)
+PTID_Amy6 <- as.data.frame(rowMeans(Amyloid_SUVR[,c(12:159)]))
+PTID_Amy<-cbind(PTID_Amy1,PTID_Amy2,PTID_Amy3,PTID_Amy4,PTID_Amy5,PTID_Amy6)
+
+PTID_Tau1 <- as.data.frame(Tau_SUVR$PTID)
+PTID_Tau2 <- as.data.frame(Tau_SUVR$AGE)
+PTID_Tau3 <- as.data.frame(Tau_SUVR$PTEDUCAT)
+PTID_Tau4 <- as.data.frame(Tau_SUVR$PTGENDER)
+PTID_Tau5 <- as.data.frame(Tau_SUVR$DX)
+PTID_Tau6 <- as.data.frame(rowMeans(Tau_SUVR[,c(12:159)]))
+PTID_Tau<-cbind(PTID_Tau1,PTID_Tau2,PTID_Tau3,PTID_Tau4,PTID_Tau5,PTID_Tau6)
+
+PTID_FDG1 <- as.data.frame(FDG_SUVR$PTID)
+PTID_FDG2 <- as.data.frame(FDG_SUVR$AGE)
+PTID_FDG3 <- as.data.frame(FDG_SUVR$PTEDUCAT)
+PTID_FDG4 <- as.data.frame(FDG_SUVR$PTGENDER)
+PTID_FDG5 <- as.data.frame(FDG_SUVR$DX)
+PTID_FDG6 <- as.data.frame(rowMeans(FDG_SUVR[,c(12:159)]))
+PTID_FDG<-cbind(PTID_FDG1,PTID_FDG2,PTID_FDG3,PTID_FDG4,PTID_FDG5,PTID_FDG6)
+
+```
+
+```{r}
+colnames(PTID_Amy)<-c("ID","Age","Education","Gender","DX","Value")
+colnames(PTID_Tau)<-c("ID","Age","Education","Gender","DX","Value")
+colnames(PTID_FDG)<-c("ID","Age","Education","Gender","DX","Value")
+
+```
+
+# 转 amyloid。tau
+
+```{r}
+
+PTID_Amy<-PTID_Amy[which(PTID_Amy$ID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+PTID_Amy_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(PTID_Amy)))
+
+for (i in 1:nrow(TABLE)){
+
+PTID_Amy_first[i,] <- PTID_Amy[max(which(PTID_Amy$ID == TABLE$Var1[i])), ]
+
+
+}
+colnames(PTID_Amy_first) <- colnames(PTID_Amy)
+PTID_Amy_first<-na.omit(PTID_Amy_first)
+
+```
+
+```{r}
+for (i in 1:nrow(PTID_Amy_first)){
+  if (is.na(PTID_Amy_first[i,5])){
+    PTID_Amy_first[1,5] = "NC"
+    
+  } else if(PTID_Amy_first[i,5] == "EMCI"){
+    PTID_Amy_first[i,5] ="MCI"
+  } 
+  
+  else if(PTID_Amy_first[i,5] == "LMCI"){
+    PTID_Amy_first[i,5] ="AD"
+  }
+  
+  else if(PTID_Amy_first[i,5] == "SMC" ||PTID_Amy_first[i,5] == "CN"){
+    PTID_Amy_first[i,5] ="NC"
+  } 
+
+}
+
+```
+
+
+
+```{r ok}
+PTID_Amy_first$DX <- factor(PTID_Amy_first$DX,levels= c("NC","MCI","AD"))
+Amybox<- ggplot(PTID_Amy_first, aes(x = DX, y =Value, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Amyloid")+ theme_bw() +  
+  scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybox
+ 
+ 
+ ggsave(
+  file="Amyloid320.png",
+  plot = Amybox,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+ 
+
+
+
+
+ 
+ 
+ 
+
+# 转 amyloid。tau
+
+```{r}
+PTID_Tau<-PTID_Tau[which(PTID_Tau$ID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+PTID_Tau_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(PTID_Tau)))
+
+for (i in 1:nrow(TABLE)){
+
+PTID_Tau_first[i,] <- PTID_Tau[max(which(PTID_Tau$ID == TABLE$Var1[i])), ]
+
+
+}
+colnames(PTID_Tau_first) <- colnames(PTID_Tau)
+PTID_Tau_first<-na.omit(PTID_Tau_first)
+
+```
+
+```{r}
+for (i in 1:nrow(PTID_Tau_first)){
+  if (is.na(PTID_Tau_first[i,5])){
+    PTID_Tau_first[1,5] = "NC"
+    
+  } else if(PTID_Tau_first[i,5] == "EMCI"){
+    PTID_Tau_first[i,5] ="MCI"
+  } 
+  
+  else if(PTID_Tau_first[i,5] == "LMCI"){
+    PTID_Tau_first[i,5] ="AD"
+  }
+  
+  else if(PTID_Tau_first[i,5] == "SMC" ||PTID_Tau_first[i,5] == "CN"){
+    PTID_Tau_first[i,5] ="NC"
+  } 
+
+}
+
+```
+```{r ok}
+PTID_Tau_first$DX <- factor(PTID_Tau_first$DX,levels= c("NC","MCI","AD"))
+Taubox<- ggplot(PTID_Tau_first, aes(x = DX, y =Value, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="Tau")+ theme_bw() +  
+  scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Taubox
+ 
+ 
+ ggsave(
+  file="Tau320.png",
+  plot = Taubox,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+## FDG
+
+```{r}
+PTID_FDG<-PTID_FDG[which(PTID_FDG$ID %in% PatientInfo320$PTID),]
+TABLE<-as.data.frame(table(PatientInfo320$PTID))
+
+PTID_FDG_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(PTID_FDG)))
+
+for (i in 1:nrow(TABLE)){
+
+PTID_FDG_first[i,] <- PTID_FDG[max(which(PTID_FDG$ID == TABLE$Var1[i])), ]
+
+
+}
+colnames(PTID_FDG_first) <- colnames(PTID_FDG)
+PTID_FDG_first<-na.omit(PTID_FDG_first)
+
+```
+
+```{r}
+for (i in 1:nrow(PTID_FDG_first)){
+   if(PTID_FDG_first[i,5] == "EMCI"){
+    PTID_FDG_first[i,5] ="MCI"
+  } 
+  
+  else if(PTID_FDG_first[i,5] == "LMCI"){
+    PTID_FDG_first[i,5] ="AD"
+  }
+  
+  else if(PTID_FDG_first[i,5] == "SMC" ||PTID_FDG_first[i,5] == "CN"){
+    PTID_FDG_first[i,5] ="NC"
+  } 
+
+}
+
+```
+```{r ok}
+PTID_FDG_first$DX <- factor(PTID_FDG_first$DX,levels= c("NC","MCI","AD"))
+FDGbox<- ggplot(PTID_FDG_first, aes(x = DX, y =Value, fill=DX )) +
+  geom_boxplot(outlier.size = 3) +
+  labs(y="FDG")+ theme_bw() +  #ylim(min(PTID_FDG_first$Value),1.7)+
+  scale_fill_manual(values=c("#00bfc4", "#52854C","#f8766d"))+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ FDGbox
+ 
+ 
+ ggsave(
+  file="FDG320.png",
+  plot = FDGbox,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+```{r}
+
+PTID<-rbind(PTID_Amy,PTID_Tau,PTID_FDG)
+#save(PTID, file = "PTID.Rda")
+```
+
+```{r}
+TABLE<-as.data.frame(table(PTID$ID))
+PTID_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(PTID)))
+
+for (i in 1:nrow(TABLE)){
+
+PTID_first[i,] <- PTID[max(which(PTID$ID == TABLE$Var1[i])), ]
+
+
+}
+colnames(PTID_first) <- colnames(PTID)
+
+```
+
+```{r ptid}
+PTID_first<-PTID_first[which(PatientInfo320$PTID %in% PTID_first$ID),]
+PTID_NC <- PTID_first[which(PTID_first$DX == "CN" | PTID_first$DX == "SMC"),]
+PTID_AD <- PTID_first[which(PTID_first$DX == "AD"| PTID_first$DX == "LMCI"),]
+PTID_MCI <- PTID_first[which(PTID_first$DX == "EMCI"),]
+
+```
+
+```{r age}
+mean(PTID_NC$Age)
+sd(PTID_NC$Age)
+mean(PTID_MCI$Age)
+sd(PTID_MCI$Age)
+mean(PTID_AD$Age)
+sd(PTID_AD$Age)
+```
+```{r age}
+summary(PTID_NC$Gender == 'Female')
+summary(PTID_MCI$Gender == 'Female')
+summary(PTID_AD$Gender == 'Female')
+#305/(246+305)
+```
+```{r PTID Amyloid and Tau}
+
+
+
+Amybox<- ggplot(PTID_MCI, aes(x = Estimate, y =Amyloid, fill=Estimate )) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(pch = 21, position = position_jitterdodge(), size=3)+labs(y="Observed Amyloid")+ theme_bw() +  
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybox
+ 
+ 
+
+
+
+```
+
+
+
+
+
+
+```{r PTID with tau}
+Amyloid_change <-read_excel("~/Amyloid_changed.xlsx")
+FDG_change <- read_excel("~/Downloads/amarnaclass/FDG_change.xlsx")
+Amyloid_change$...1 <- NULL
+FDG_change$...1 <- NULL
+
+for(i in 1:320){
+  
+  if (PatientInfo320[i,2] == "CN" || PatientInfo320[i,2] == "SMC" ){
+    PatientInfo320[i,2] = "NC"
+  }
+  if (PatientInfo320[i,2] == "LMCI"){
+    PatientInfo320[i,2] = "AD"
+  
+  } 
+  if (PatientInfo320[i,2] == "EMCI"){
+    PatientInfo320[i,2] = "MCI"
+  
+  }  
+}
+
+
+
+PatientInfo320 %>%
+        group_by(DX) %>%
+        tally()
+
+
+
+for(i in 1:320){
+  for(j in 1:761){
+    if(Amyloid_last[j,1] == PatientInfo320[i,1]){
+      PatientInfo320[i,3] =Amyloid_last[j,6]
+    }
+  }
+}
+
+```
+
+```{r}
+write.csv(PatientInfo320, file = "Pat.csv")
+
+
+```
+```{r amy_last test}
+TABLE<-as.data.frame(table(Amyloid_change$PTID))
+Amyloid_last <-as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_change)))
+
+for (i in 1:nrow(TABLE)){
+
+Amyloid_last[i,] <- Amyloid_change[max(which(Amyloid_change$PTID == TABLE$Var1[i])), ]
+
+}
+
+colnames(Amyloid_last) <- colnames(Amyloid_change)
+
+```
+
+```{r seperate classes}
+Amyloid_NC <- Amyloid_last[which(Amyloid_last$DXlast == "CN" | Amyloid_last$DXlast == "SMC"),]
+Amyloid_MCI <- Amyloid_last[which(Amyloid_last$DXlast == "EMCI"),]
+Amyloid_AD <- Amyloid_last[which(Amyloid_last$DXlast == "AD"| Amyloid_last$DXlast == "LMCI"),]
+
+if(nrow(Amyloid_NC)+nrow(Amyloid_MCI)+nrow(Amyloid_AD) == nrow(Amyloid_last)){
+  TRUE
+}
+
+```
+
+```{r mean of changes}
+mean(colMeans(Amyloid_NC[12:159]))
+sd(colMeans(Amyloid_NC[12:159]))
+mean(colMeans(Amyloid_MCI[12:159]))
+sd(colMeans(Amyloid_MCI[12:159]))
+mean(colMeans(Amyloid_AD[12:159]))
+sd(colMeans(Amyloid_AD[12:159]))
+
+```
+```{r mean of month}
+mean(Amyloid_NC$Time/30)
+sd(Amyloid_NC$Time/30)
+mean(Amyloid_MCI$Time/30)
+sd(Amyloid_MCI$Time/30)
+mean(Amyloid_AD$Time/30)
+sd(Amyloid_AD$Time/30)
+
+
+```
+
+
+
+# Tau
+```{r}
+Tau_change <- read_excel("~/Downloads/amarnaclass/Tau_change.xlsx")
+
+Tau_change$...1 <- NULL
+
+
+```
+```{r tau_last test}
+TABLE<-as.data.frame(table(Tau_change$PTID))
+Tau_last <-as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_change)))
+
+for (i in 1:nrow(TABLE)){
+
+Tau_last[i,] <- Tau_change[max(which(Tau_change$PTID == TABLE$Var1[i])), ]
+
+}
+
+colnames(Tau_last) <- colnames(Tau_change)
+
+```
+
+```{r seperate classes}
+Tau_NC <- Tau_last[which(Tau_last$DXlast == "CN" | Tau_last$DXlast == "SMC"),]
+Tau_MCI <- Tau_last[which(Tau_last$DXlast == "EMCI"),]
+Tau_AD <- Tau_last[which(Tau_last$DXlast == "AD"| Tau_last$DXlast == "LMCI"),]
+
+if(nrow(Tau_NC)+nrow(Tau_MCI)+nrow(Tau_AD) == nrow(Tau_last)){
+  TRUE
+}
+
+```
+
+```{r mean of changes}
+mean(colMeans(Tau_NC[12:159]))
+sd(colMeans(Tau_NC[12:159]))
+mean(colMeans(Tau_MCI[12:159]))
+sd(colMeans(Tau_MCI[12:159]))
+mean(colMeans(Tau_AD[12:159]))
+sd(colMeans(Tau_AD[12:159]))
+
+```
+```{r mean of month}
+mean(Tau_NC$Time/30)
+sd(Tau_NC$Time/30)
+mean(Tau_MCI$Time/30)
+sd(Tau_MCI$Time/30)
+mean(Tau_AD$Time/30)
+sd(Tau_AD$Time/30)
+
+
+```
+
+
+
+
+# FDG
+
+```{r FDG_last test}
+FDG_change <- read_excel("~/Downloads/amarnaclass/FDG_change.xlsx")
+
+FDG_change$...1 <- NULL
+
+
+TABLE<-as.data.frame(table(FDG_change$PTID))
+FDG_last <-as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_change)))
+
+for (i in 1:nrow(TABLE)){
+
+FDG_last[i,] <- FDG_change[max(which(FDG_change$PTID == TABLE$Var1[i])), ]
+
+}
+
+colnames(FDG_last) <- colnames(FDG_change)
+
+```
+
+```{r seperate classes}
+FDG_NC <- FDG_last[which(FDG_last$DXlast == "CN" | FDG_last$DXlast == "SMC"),]
+FDG_MCI <- FDG_last[which(FDG_last$DXlast == "EMCI"),]
+FDG_AD <- FDG_last[which(FDG_last$DXlast == "AD"| FDG_last$DXlast == "LMCI"),]
+
+if(nrow(FDG_NC)+nrow(FDG_MCI)+nrow(FDG_AD) == nrow(FDG_last)){
+  TRUE
+}
+
+```
+
+```{r mean of changes}
+mean(colMeans(FDG_NC[12:159]))
+sd(colMeans(FDG_NC[12:159]))
+mean(colMeans(FDG_MCI[12:159]))
+sd(colMeans(FDG_MCI[12:159]))
+mean(colMeans(FDG_AD[12:159]))
+sd(colMeans(FDG_AD[12:159]))
+
+```
+```{r mean of month}
+mean(FDG_NC$Time/30)
+sd(FDG_NC$Time/30)
+mean(FDG_MCI$Time/30)
+sd(FDG_MCI$Time/30)
+mean(FDG_AD$Time/30)
+sd(FDG_AD$Time/30)
+
+
+```
+```{r}
+
+
+```
+
+
+# FDG checking
+
+```{r}
+TABLE<-as.data.frame(table(Tau_SUVR$PTID))
+ID320_last <-as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+ID320_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+
+for (i in 1:nrow(TABLE)){
+
+ID320_last[i,] <- Tau_SUVR[max(which(Tau_SUVR$PTID == TABLE$Var1[i])), ]
+ID320_first[i,] <- Tau_SUVR[min(which(Tau_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+```
+
+```{r medium}
+ID320_medium <-as.data.frame(matrix(0,nrow(ID320_last), ncol(ID320_last)))
+for (i in 1:nrow(ID320_medium)){
+  ID320_medium[i,1]= ID320_last[i,1];
+  ID320_medium[i,2] = as.numeric(ID320_last[i,2])-as.numeric(ID320_first[i,2]);
+  ID320_medium[i,12:159]=ID320_last[i,12:159]-ID320_first[i,12:159];
+  ID320_medium[i,3]= ID320_first[i,4];
+  ID320_medium[i,4]= ID320_last[i,4];
+  ID320_medium[i,5:11]=ID320_last[i,5:11];
+  
+}
+
+colnames(ID320_medium)<- colnames(ID320_last)
+ID320_medium<-ID320_medium[ID320_medium$V2 != 0, ]
+
+```
+
+
+
+
+```{r}
+ID320_NC <- ID320_medium[which(ID320_medium$V4 == "CN" | ID320_medium$V4 == "SMC"),]
+ID320_AD <- ID320_medium[which(ID320_medium$V4 == "AD"| ID320_medium$V4 == "LMCI"),]
+ID320_MCI <- ID320_medium[which(ID320_medium$V4 == "EMCI"|ID320_medium$V4 == "MCI"),]
+```
+
+```{r average change for nodes}
+mean(colMeans(ID320_NC[12:159]))
+sd(colMeans(ID320_NC[12:159]))
+mean(colMeans(ID320_MCI[12:159]))
+sd(colMeans(ID320_MCI[12:159]))
+mean(colMeans(ID320_AD[12:159]))
+sd(colMeans(ID320_AD[12:159]))
+
+
+```
+```{r average days}
+mean(ID320_NC$V2)/30
+sd(ID320_NC$V2)/30
+mean(ID320_MCI$V2)/30
+sd(ID320_MCI$V2)/30
+mean(ID320_AD$V2)/30
+sd(ID320_AD$V2)/30
+```
+
+

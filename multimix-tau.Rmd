@@ -1,0 +1,294 @@
+---
+title: "test-multimix"
+output: html_document
+---
+
+`
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(BSDA)
+```
+
+```{r ggplot}
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+#FDG_SUVR <- read_excel("~/Downloads/FDG_SUVR.xlsx")
+Amyloid_SUVR <- read_excel("~/Downloads/Amyloid_SUVR.xlsx")
+Amyloid_SUVR<-na.omit(Amyloid_SUVR)
+#Tau_SUVR <- read_excel("~/Downloads/Tau_SUVR.xlsx")
+#Tau_SUVR<-na.omit(Tau_SUVR)
+```
+
+```{r setup mixture model}
+
+compute.log.lik <- function(L, w) {
+  L[,1] = L[,1]*w[1]
+  L[,2] = L[,2]*w[2]
+  return(sum(log(rowSums(L))))
+}
+mixture.EM <- function(w.init, L) {
+  
+  w.curr <- w.init
+  
+  # store log-likehoods for each iteration
+  log_liks <- c()
+  ll       <- compute.log.lik(L, w.curr)
+  log_liks <- c(log_liks, ll)
+  delta.ll <- 1
+  
+  while(delta.ll > 1e-5) {
+    w.curr   <- EM.iter(w.curr, L)
+    ll       <- compute.log.lik(L, w.curr)
+    log_liks <- c(log_liks, ll)
+    delta.ll <- log_liks[length(log_liks)]  - log_liks[length(log_liks)-1]
+  }
+  return(list(w.curr, log_liks))
+}
+
+EM.iter <- function(w.curr, L, ...) {
+  
+  # E-step: compute E_{Z|X,w0}[I(Z_i = k)]
+  z_ik <- L
+  for(i in seq_len(ncol(L))) {
+    z_ik[,i] <- w.curr[i]*z_ik[,i]
+  }
+  z_ik<- z_ik / rowSums(z_ik)
+  
+  # M-step
+  w.next   <- colSums(z_ik)/sum(z_ik)
+  return(w.next)
+}
+```
+
+
+```{r forming tau first and last}
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>2),]
+ 
+Tau_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+Tau_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_first[i,] <- Tau_SUVR[min(which(Tau_SUVR$PTID == TABLE$Var1[i])), ]
+
+Tau_last[i,] <- Tau_SUVR[max(which(Tau_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+colnames(Tau_first) <- colnames(Tau_SUVR)
+colnames(Tau_last) <- colnames(Tau_SUVR)
+```
+
+
+```{r forming amyloid first and last}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>2),]
+
+Amyloid_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+Amyloid_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_first[i,] <- Amyloid_SUVR[min(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+Amyloid_last[i,] <- Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+colnames(Amyloid_first) <- colnames(Amyloid_SUVR)
+colnames(Amyloid_last) <- colnames(Amyloid_SUVR)
+```
+
+```{r import data}
+for (i in 12:159){
+  meanAmyloid[i-11,1] <- mean(Amyloid_first[,i])
+  meanAmyloid[i-11,2] <- mean(Amyloid_last[,i])
+  ttest<-t.test(as.numeric(Amyloid_first[,i]), as.numeric(Amyloid_last[,i]))
+  meanAmyloid[i-11,3] <- ttest$p.value
+  
+  meanAmyloid[i-11,4] <- cor(as.numeric(Amyloid_first[,i]), as.numeric(Amyloid_last[,i]))
+  meanAmyloid[i-11,5] <- as.numeric(Amyloid_last[i-11,3]-as.numeric(Amyloid_first[i-11,3]))
+}
+
+
+```
+```{r ij}
+meanAmyloid <- as.data.frame(matrix(0,148,5))
+colnames(meanAmyloid) <- c('Firstmean', 'Lastmean', 'P-value <0.05' , 'Correlation','Differences in time')
+
+         
+```
+
+```{r}
+a <- sd(as.numeric(Amyloid_first[,12]))
+b <- sd(as.numeric(Amyloid_last[,12]))
+z.test(as.numeric(Amyloid_first[,12]), as.numeric(Amyloid_last[,12]),sigma.x = a,sigma.y = b)
+
+```
+
+```{r create prob matrix}
+Prob_first<-as.data.frame(matrix(0,148, 2))
+colnames(Prob_first)<-c("P_Tau-","P_Tau+") 
+
+
+Prob_last<-as.data.frame(matrix(0,148, 2))
+colnames(Prob_last)<-c("P_Tau-","P_Tau+")
+```
+
+```{r createlast}
+Prob_fdg<-as.data.frame(matrix(0,148, 2))
+colnames(Prob_fdg)<-c("P_Tau-","P_Tau+")
+```
+
+```{r try tau first so on}
+
+for (i in 147){
+X<-Tau_first[, c(12+i)]
+  
+EST<-normalmixEM(X, lambda = NULL, mu = NULL, sigma = NULL, k = 2,
+mean.constr = NULL, sd.constr = NULL,
+epsilon = 1e-08, maxit = 1000, maxrestarts=20,
+verb = FALSE, fast=FALSE, ECM = FALSE,
+arbmean = TRUE, arbvar = TRUE)
+  
+mu.true<- EST$mu
+sigma.true<- EST$sigma
+
+L = matrix(NA, nrow=length(X), ncol= 2)
+L[, 1] = dnorm(X, mean=mu.true[1], sd = sigma.true[1])
+L[, 2] = dnorm(X, mean=mu.true[2], sd = sigma.true[2])
+
+#perform EM
+evaluation_prob<- mixture.EM(w.init=c(0.5,0.5), L)
+Prob_first[i+1,]<-evaluation_prob[[1]] 
+}
+```
+
+```{r last}
+for (i in 1){
+X<-Tau_last[, c(12+i)]
+  
+EST<-normalmixEM(X, lambda = NULL, mu = NULL, sigma = NULL, k = 2,
+mean.constr = NULL, sd.constr = NULL,
+epsilon = 1e-08, maxit = 1000, maxrestarts=20,
+verb = FALSE, fast=FALSE, ECM = FALSE,
+arbmean = TRUE, arbvar = TRUE)
+  
+mu.true<- EST$mu
+sigma.true<- EST$sigma
+  
+  
+L = matrix(NA, nrow=length(X), ncol= 2)
+L[, 1] = dnorm(X, mean=mu.true[1], sd = sigma.true[1])
+L[, 2] = dnorm(X, mean=mu.true[2], sd = sigma.true[2])
+}
+#perform EM
+#ee <- mixture.EM(w.init=c(0.5,0.5), L)
+#Prob_last[i+1,]<-ee[[1]] }
+```
+
+```{r test}
+
+
+
+for (i in 133:147){
+X<-Tau_first[, c(12+i)]
+  
+EST<-normalmixEM(X, lambda = NULL, mu = NULL, sigma = NULL, k = 2,
+mean.constr = NULL, sd.constr = NULL,
+epsilon = 1e-08, maxit = 1000, maxrestarts=20,
+verb = FALSE, fast=FALSE, ECM = FALSE,
+arbmean = TRUE, arbvar = TRUE)
+  
+expectation[i+1,1]<- EST$mu[1]
+expectation[i+1,2]<- EST$mu[2]
+expectation[i+1,3]<- EST$sigma[1]
+expectation[i+1,4]<- EST$sigma[2]
+}
+  
+```
+```{r fdg selection}
+exp501 <- as.data.frame(matrix(0,148, 4))
+exp502 <- as.data.frame(matrix(0,148, 4))
+fdg2001<-FDG_SUVR[sample(nrow(FDG_SUVR), 2000), ]
+fdg2002<-FDG_SUVR[sample(nrow(FDG_SUVR), 2000), ]
+```
+200x200: 0:12, 14:23,26:42,44:84,87:116, 118:147
+500x500: (0:4, 7:15, 17:37, 39:42, 44:45, 47:62, 64:78, 80) 81,82:89, 91:104, 106:119, 122:124, 128:136, 138, 140:143, 145:147)
+```{r fdg}
+
+a <-c(51:147)
+for (i in a){
+X<-fdg501[, c(12+i)]
+X<-t(na.omit(X))
+EST<-normalmixEM(X, lambda = NULL, mu = NULL, sigma = NULL, k = 2,
+mean.constr = NULL, sd.constr = NULL,
+epsilon = 1e-08, maxit = 1000, maxrestarts=20,
+verb = FALSE, fast=FALSE, ECM = FALSE,
+arbmean = TRUE, arbvar = TRUE)
+  
+exp501[i+1,1]<- EST$mu[1]
+exp501[i+1,2]<- EST$mu[2]
+exp501[i+1,3]<- EST$sigma[1]
+exp501[i+1,4]<- EST$sigma[2]
+}
+```
+```{r FDG2}
+a <-c(0:147)
+for (i in a){
+Y<-fdg502[, c(12+i)]
+Y<-t(na.omit(Y))
+EST<-normalmixEM(Y, lambda = NULL, mu = NULL, sigma = NULL, k = 2,
+mean.constr = NULL, sd.constr = NULL,
+epsilon = 1e-08, maxit = 1000, maxrestarts=20,
+verb = FALSE, fast=FALSE, ECM = FALSE,
+arbmean = TRUE, arbvar = TRUE)
+  
+exp502[i+1,1]<- EST$mu[1]
+exp502[i+1,2]<- EST$mu[2]
+exp502[i+1,3]<- EST$sigma[1]
+exp502[i+1,4]<- EST$sigma[2]
+}
+  
+```
+
+```{r}
+
+t = matrix(NA, nrow=length(X), ncol= 1)
+
+```
+
+```{r}
+result <- read.csv("~/Downloads/lastresult.csv")
+result[result== 0] <- NA 
+result <- na.omit(result)
+
+
+
+ggplot(result, aes(y=X0.89198, x=node)) +
+  geom_point()+
+  geom_abline()
+  geom_label()
+
+```
+```{r plot lresult=first result}
+lresult <-read.csv("~/Downloads/firstresult.csv")
+lresult[lresult== 0] <- NA 
+lresult <- na.omit(lresult)
+
+lresult      <- as.data.frame(lresult)
+lresult$nodey <- rownames(lresult)
+nodeyi <- as.numeric(lresult$nodey)
+
+ggplot(lresult, aes(y=X0.89198, x=node)) +
+  geom_point()+
+  geom_abline()
+  geom_label()
+```
+
+```{r}
+write.csv(fdg2001,file = "fdg2001.csv")
+write.csv(fdg2002,file = "fdg2002.csv")
+```
+```{r}
+write.csv(exp501,file = "fdg1001.csv")
+write.csv(exp502,file = "fdg1002.csv")
+```

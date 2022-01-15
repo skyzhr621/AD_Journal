@@ -1,0 +1,502 @@
+---
+title: "figure4"
+output: html_document
+---
+
+
+```{r A VS T}
+Patient320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+```
+
+
+```{r}
+
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+FDG_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+for (i in 1:nrow(TABLE)){
+FDG_First[i,] <- as.data.frame(FDG_SUVR[max(which(FDG_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(FDG_First) <- colnames(FDG_SUVR)
+
+FDG_new<-FDG_First[which(FDG_First$PTID %in% Patient320$PTID),]
+
+```
+
+```{r 148 nodes}
+
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+#pred22<-Pred_updated
+
+```
+
+## Predict 22 start here
+```{r}
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(297:444)]))
+pred_320<-as.data.frame(rowMeans(Pred_updated[,c(297:444)]))
+
+colnames(pred_148)<-c("Prediction")
+colnames(pred_320)<-c("Prediction_320")
+
+
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+
+Pred148<-cbind(Pred148,c(1:148))
+colnames(Pred148)<-c("FDG","Prediction","Estimate")
+
+#colnames(Pred320)<-c("FDG","Prediction","DX")
+summary(lm(Pred148$Prediction~Pred148$FDG))
+```
+
+
+```{r 148 nodes}
+
+Pred148<-cbind(Pred148,c(1:148))
+colnames(Pred148)<-c("Prediction","FDG","Estimate","Node")
+
+```
+
+```{r}
+for(i in 1:148){
+  if(0.69736+Pred148[i,1]*0.61347<Pred148[i,2]){
+    Pred148[i,3] ="Underestimated";
+  } else{
+    Pred148[i,3] ="Overestimated";
+  } 
+
+}
+
+```
+
+
+
+
+```{r find the intervals}
+
+#run loess model
+cars.lo <- lm(Pred148$FDG ~ Pred148$Prediction)
+
+predictdf.loess <- function(model, xseq, se, level) {
+  pred <- stats::predict(model, newdata = data.frame(x = xseq), se = se)
+
+  if (se) {
+    y = pred$fit
+    ci <- pred$se.fit * stats::qt(level / 2 + .5, pred$df)
+    ymin = y - ci
+    ymax = y + ci
+    data.frame(x = xseq, y, ymin, ymax, se = pred$se.fit)
+  } else {
+    data.frame(x = xseq, y = as.vector(pred))
+  }
+}
+
+#get the predictions i.e. the fit and se.fit vectors
+pred <- predict(cars.lo, se=TRUE)
+#create a data.frame from those
+df2 <- data.frame(Prediction=Pred148$Prediction, fit=pred$fit, se.fit=pred$se.fit * qt(0.99 / 2 + .5, pred$df))
+
+
+#make the flag
+outerpoints <- +(Pred148$FDG > df2$fit + df2$se.fit |  Pred148$FDG < df2$fit - df2$se.fit)
+#add flag to original data frame
+Pred148$outer <- outerpoints
+
+
+
+for(i in 1:148){
+  if(Pred148[i,5] == 0){
+    Pred148[i,3] ="Fitted";
+  } 
+}
+
+
+a<-Pred148[which(Pred148$Estimate=="Underestimated"),]$Node
+b<-Pred148[which(Pred148$Estimate=="Overestimated"),]$Node
+c<-Pred148[which(Pred148$Estimate=="Fitted"),]$Node
+```
+
+
+
+
+```{r}
+f<-factor(Pred148$Estimate, levels = c("Overestimated", "Underestimated", "Fitted"))
+Pred148$Estimate<-fct_relevel(f)
+
+ATdiff<- ggplot(Pred148, aes(y = FDG, x =  Prediction, color = Estimate)) +
+  geom_point(size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5,level=0.99)+
+      
+  labs(y="Observed N", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  ylim(min(Pred148$FDG), max(Pred148$FDG))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=20),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.47,.02),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+scale_color_manual(labels = c("Overestimated","Underestimated","Fitted"), values = c("#f8766d", "#00bfc4","#800080"))
+ATdiff
+
+ggsave(
+  file="FDGvsPred_estimtation.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+# turn back to amy and tau
+
+# generate amy new
+
+```{r}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+Amyloid_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_First[i,] <- as.data.frame(Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Amyloid_First) <- colnames(Amyloid_SUVR)
+
+```
+
+```{r}
+
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+Tau_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_First[i,] <- as.data.frame(Tau_SUVR[max(which(Tau_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Tau_First) <- colnames(Tau_SUVR)
+
+```
+## new amy and tau
+```{r}
+#FDG_new<-FDG_First[which(FDG_First$PTID %in% Patient320$PTID),]
+Tau_new<-Tau_First[which(Tau_First$PTID %in% Patient320$PTID),]
+Amyloid_new<-Amyloid_First[which(Amyloid_First$PTID %in% Patient320$PTID),]
+
+
+Pred148_Amy<-as.data.frame(cbind(colMeans(Amyloid_new[,c(12:159)]),colMeans(pred22[,c(3:150)]),c(1:148)))
+colnames(Pred148_Amy)<-c("Amyloid","Prediction","Estimate")
+
+
+Pred148_Tau<-as.data.frame(cbind(colMeans(Tau_new[,c(12:159)]),colMeans(pred22[,c(3:150)]),c(1:148)))
+colnames(Pred148_Tau)<-c("Tau","Prediction","Estimate")
+```
+
+# classify over and under
+```{r}
+lm(Pred148_Amy$Prediction ~ Pred148_Amy$Amyloid)
+
+for(i in a){
+  Pred148_Amy[i,3]="Underestimated";
+  
+  Pred148_Tau[i,3]="Underestimated";
+
+}
+
+for(i in b){
+  Pred148_Amy[i,3]="Overestimated";
+  Pred148_Tau[i,3]="Overestimated";
+
+}
+
+for(i in c){
+  Pred148_Amy[i,3]="Fitted";
+  Pred148_Tau[i,3]="Fitted";
+
+}
+
+
+
+Amy1<-Pred148_Amy %>% slice(a,b)
+Tau1<-Pred148_Tau %>% slice(a,b)
+```
+
+
+```{r ok}
+library(ggsignif)
+Amybox<- ggplot(Amy1, aes(x = Estimate, y =Amyloid, fill=Estimate )) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(pch = 21, position = position_jitterdodge(), size=3)+labs(y="Observed Amyloid")+ theme_bw() + 
+  geom_signif(comparisons = list(c("Overestimated", "Underestimated")), 
+              map_signif_level=TRUE,textsize=15)+
+  ylim(1.2,2.5)+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+ Amybox
+ 
+ 
+ ggsave(
+  file="AmyloidBox.png",
+  plot = Amybox,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+```{r ok}
+library(ggsignif)
+Taubox<- ggplot(Tau1, aes(x = Estimate, y =Tau, fill=Estimate )) +
+  geom_boxplot(outlier.size = 0) +
+  geom_point(pch = 21, position = position_jitterdodge(), size=3)+labs(y="Observed Tau")+ theme_bw() +  
+  geom_signif(comparisons = list(c("Overestimated", "Underestimated")), 
+              map_signif_level=TRUE,textsize=15)+
+  ylim(1.1,1.8)+
+  theme( aspect.ratio=3/4,
+         axis.title.x=element_blank(),
+           
+         axis.text.x = element_text(size=rel(1.13) ),
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   
+
+Taubox
+ 
+ 
+ ggsave(
+  file="TauBox.png",
+  plot = Taubox,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+## one significance test over Amyloid and Tau
+
+
+
+```{r}
+
+#Amy1[which(Amy1[,3]=="Overestimated"),]$Amyloid
+t.test(Amy1[which(Amy1[,3]=="Overestimated"),]$Amyloid, 
+       Amy1[which(Amy1[,3]=="Underestimated"),]$Amyloid, alternative = "two.sided", var.equal = FALSE)
+
+t.test(Tau1[which(Tau1[,3]=="Overestimated"),]$Tau, 
+       Tau1[which(Tau1[,3]=="Underestimated"),]$Tau, alternative = "two.sided", var.equal = FALSE)
+
+
+
+
+```
+
+## just another testing
+
+
+```{r}
+set.seed(8)
+df <- data.frame(expression=runif(1000), 
+                 gene=rep(paste("gene", seq(250)), 4), 
+                 treatment = rep(c("A","A","B","B"), each=250))
+
+out <- do.call("rbind", 
+    lapply(split(df, df$gene), function(x) t.test(expression~treatment, x)$p.value))
+length(which(out < 0.05))
+
+```
+
+```{r}
+
+out <- do.call("rbind", 
+    lapply(split(df, df$gene), function(x) t.test(expression~treatment, x)$p.value))
+length(which(out < 0.05))
+
+```
+
+
+## Amyloid and Tau residual
+
+```{r Amyloid residual}
+summary(lm(Pred148$FDG~Pred148$Prediction))
+#summary(lm(Pred148_Amy$Amyloid~Pred148_Amy$Prediction))
+#summary(lm(Pred148_Tau$Tau~Pred148_Tau$Prediction))
+```
+```{r}
+for(i in 1:148){
+  Pred148_Amy[i,3]= -Pred148[i,1]*0.61347 - 0.69736 + Pred148[i,2];
+  Pred148_Tau[i,3]= -Pred148[i,1]*0.61347 - 0.69736 + Pred148[i,2];
+}
+
+summary(lm(Pred148_Amy$Estimate~Pred148_Amy$Amyloid))
+summary(lm(Pred148_Tau$Estimate~Pred148_Tau$Tau))
+```
+```{r 0.9307}
+
+Amyr<-ggplot(Pred148_Amy, aes(x = Amyloid, y = as.numeric(Estimate))) +
+  geom_point(size=3)+
+  xlab("Observed Amyloid")+
+  ylab("Model Residual")+
+  xlim(min(Pred148_Amy$Amyloid),max(Pred148_Amy$Amyloid))+
+  ylim(min(as.numeric(Pred148_Amy$Estimate)),max(as.numeric(Pred148_Amy$Estimate)))+
+  geom_smooth(method = "lm",size=1.5)+
+  theme_bw() +  
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", x =2.19, y = 0.27, parse = TRUE, label = "r^2 == 0.32", size=10 )
+
+Amyr
+
+ ggsave(
+  file="AmyResidual.png",
+  plot = Amyr,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+
+
+```
+```{r 0.3641}
+
+Taur<-ggplot(Pred148_Tau, aes(x = Tau, y = as.numeric(Estimate))) +
+  geom_point(size=3)+
+  xlab("Observed Tau")+
+  ylab("Model Residual")+
+  geom_smooth(method = "lm",size=1.5)+
+  xlim(min(Pred148_Tau$Tau),max(Pred148_Tau$Tau))+
+  ylim(min(as.numeric(Pred148_Tau$Estimate)),max(as.numeric(Pred148_Tau$Estimate)))+
+  theme_bw() +  
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position ="none",
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )   +annotate("text", x =1.72, y = 0.27, parse = TRUE, label = "r^2 == 0.11", size=10 )
+Taur
+
+ ggsave(
+  file="TauResidual.png",
+  plot = Taur,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+```
+```{r}
+
+a
+b
+```
+
+
+

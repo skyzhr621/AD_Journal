@@ -1,0 +1,221 @@
+---
+title: "z-test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+library(xlsx)
+library('lubridate')
+FDG_SUVR <- read_excel("~/Downloads/FDG_SUVR.xlsx")
+FDG_change <- read_excel("~/Downloads/amarnaclass/FDG_change.xlsx")
+#FDG_SUVR<-na.omit(FDG_SUVR)
+
+```
+
+# Tau
+Dont' run this
+
+```{r forming amyloid first and last}
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(FDG_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+numvariable = nrow(FDG_SUVR)-sum(TABLE$Freq)-nrow(TABLE2)
+FDG_change <- as.data.frame(matrix(0,numvariable, ncol(FDG_SUVR)))
+colnames(FDG_change) <- colnames(FDG_SUVR)
+
+```
+
+```{r date format}
+
+FDG_SUVR <- FDG_SUVR[1:3478,]
+startdate <- as.Date("2010-01-01")
+ok<-as.data.frame(FDG_SUVR$EXAMDATE)
+b<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+a<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+
+for (i in 1:nrow(ok)) {
+b[i,1] <- as.data.frame(toString(as.Date(paste(ok[i,1], sep=""), "%Y%m%d")))
+}
+colnames(b) <-c("Date")
+```
+
+```{r}
+save(FDG_SUVR, file = "FDG_SUVRupdated.Rda")
+```
+
+```{r}
+
+for(i in 1:nrow(ok)){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+}
+colnames(a) <-c("Difference")
+FDG_SUVR$SCAN <-a
+```
+```{r forming amyloid first}
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+FDG_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+for (i in 1:nrow(TABLE)){
+FDG_First[i,] <- as.data.frame(FDG_SUVR[min(which(FDG_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(FDG_First) <- colnames(FDG_SUVR)
+
+```
+
+```{r amyloid change}
+l =1;
+FDG_change <- as.data.frame(matrix(0,numvariable, ncol(FDG_SUVR)))
+ for (i in 1:nrow(FDG_First)) {
+   
+   # Find correspondences
+   for (j in 1:nrow(FDG_SUVR)){
+   
+    #If PTID is equal and time is not equal
+    if(FDG_First[i,1] == FDG_SUVR[j,1]){
+      if(FDG_First[i,2] != FDG_SUVR[j,2]) {
+    
+     # Find changes in 148 nodes
+      for (k in 1:148){
+       FDG_change[l,11+k] <- FDG_SUVR[j,11+k] - FDG_First[i,11+k];
+      }
+      # PTID and Date
+      FDG_change[l,1]<-FDG_SUVR[j,1];
+      FDG_change[l,2]<-FDG_SUVR[j,2] - FDG_First[i,2];
+      # DXs
+      FDG_change[l,3]<-FDG_SUVR[j,4];
+      FDG_change[l,4]<-FDG_First[i,4];
+      # Rest
+      FDG_change[l,5]<-FDG_First[i,5];
+      FDG_change[l,6]<-FDG_First[i,6];
+      FDG_change[l,7]<-FDG_First[i,7];
+      FDG_change[l,8]<-FDG_First[i,8];
+      FDG_change[l,9]<-FDG_First[i,9];
+      FDG_change[l,10]<-FDG_First[i,10];
+      FDG_change[l,11]<-FDG_First[i,11];
+      
+      l=l+1;
+     }
+    }
+  }
+ }
+                          
+```
+
+```{r output}
+colnames(FDG_change) <-colnames(FDG_First)
+FDG_change<- FDG_change %>% 
+  rename(
+    Time= SCAN,
+    DXfirst = EXAMDATE,
+    DXlast = DX
+    )
+#colnames(FDG_change) <- c("PTID","Timechange", "DXfirst", "DXlast", "Age", "Gender", "Education","Ethic", "Ethiccate","Marry","APOE4")
+#write.xlsx(FDG_change, 'FDG_changed.xlsx')
+```
+```{r delete CN}
+FDG_noCN <- FDG_change[which(FDG_change$DXlast!='CN'), ]
+FDG_noCN$...1 <- NULL
+```
+
+
+
+## Amyloid Statistic
+
+#### Useful part
+```{r}
+temp <- as.data.frame(FDG_change[,12:159])
+
+storage <- list()
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ FDG_change$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["FDG_change$Time"])
+}
+
+for(i in names(temp)){
+  fit <- lm(get(i) ~ FDG_change$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta", "p-value")
+```
+
+
+
+```{r linear regression}
+
+fit1<-lm(FDG_noCN$`Node 147` ~ FDG_noCN$Time)
+fit1$coefficients
+plot(FDG_noCN$`Node 147` ~ FDG_noCN$Time)+
+  abline(fit1)
+```
+```{r}
+temp <- as.data.frame(FDG_noCN[,12:159])
+
+storage <- list()
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ FDG_noCN$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["FDG_noCN$Time"])
+}
+
+for(i in names(temp)){
+  fit <- lm(get(i) ~ FDG_noCN$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta", "p-value")
+```
+```{r subset}
+FDG_change$...1 <- NULL
+FDG_stage1<-FDG_change[which(FDG_change$DXlast=='CN'), ]
+FDG_stage1<-rbind(FDG_stage1,FDG_change[which(FDG_change$DXlast=='SMC'), ])
+
+FDG_stage2<-FDG_change[which(FDG_change$DXlast=='EMCI'), ]
+
+FDG_stage3<-FDG_change[which(FDG_change$DXlast=='LMCI'), ]
+FDG_stage3<-rbind(FDG_stage3,FDG_change[which(FDG_change$DXlast=='AD'), ])
+
+```
+
+```{r calculation}
+temp1 <- as.data.frame(FDG_stage1[,12:159])
+mean(colMeans(temp1))
+sd(colMeans(temp1))
+
+temp2 <- as.data.frame(FDG_stage2[,12:159])
+mean(colMeans(temp2))
+sd(colMeans(temp2))
+
+temp3 <- as.data.frame(FDG_stage3[,12:159])
+mean(colMeans(temp3))
+sd(colMeans(temp3))
+```
+```{r gogo}
+
+FDG_stat <- as.data.frame(colMeans(temp1))
+FDG_stat <- cbind(FDG_stat,colMeans(temp2),colMeans(temp3))
+colnames(FDG_stat) <-c("NC","MCI","AD")
+
+```
+
+```{r}
+#write.xlsx(FDG_change, 'FDG_change.xlsx')
+save(FDG_stat, file = "FDG_stat.RDa")
+```

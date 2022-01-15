@@ -1,0 +1,225 @@
+---
+title: "z-test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+library(xlsx)
+library('lubridate')
+Tau_SUVR <- read_excel("~/Downloads/Tau_SUVR.xlsx")
+
+#Tau_SUVR<-na.omit(Tau_SUVR)
+```
+
+# Tau
+Dont' run this
+```{r forming amyloid first and last}
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(Tau_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+numvariable = nrow(Tau_SUVR)-sum(TABLE$Freq)-nrow(TABLE2)
+Tau_change <- as.data.frame(matrix(0,numvariable, ncol(Tau_SUVR)))
+colnames(Tau_change) <- colnames(Tau_SUVR)
+
+```
+
+```{r date format}
+startdate <- as.Date("2010-01-01")
+ok<-as.data.frame(Tau_SUVR$EXAMDATE)
+b<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+a<-as.data.frame(matrix(0,nrow(ok), ncol(ok)))
+
+for (i in 1:nrow(ok)) {
+b[i,1] <- as.data.frame(toString(as.Date(paste(ok[i,1], sep=""), "%Y%m%d")))
+}
+colnames(b) <-c("Date")
+
+for(i in 1:nrow(ok)){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+colnames(a) <-c("Difference")
+}
+Tau_SUVR$SCAN <-a
+```
+
+```{r forming amyloid first}
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+Tau_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_First[i,] <- as.data.frame(Tau_SUVR[min(which(Tau_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Tau_First) <- colnames(Tau_SUVR)
+
+```
+
+```{r amyloid change}
+l =1;
+Tau_change <- as.data.frame(matrix(0,numvariable, ncol(Tau_SUVR)))
+ for (i in 1:nrow(Tau_First)) {
+   
+   # Find correspondences
+   for (j in 1:nrow(Tau_SUVR)){
+   
+    #If PTID is equal and time is not equal
+    if(Tau_First[i,1] == Tau_SUVR[j,1]){
+      if(Tau_First[i,2] != Tau_SUVR[j,2]) {
+    
+      # Find changes in 148 nodes
+      for (k in 1:148){
+       Tau_change[l,11+k] <- Tau_SUVR[j,11+k] - Tau_First[i,11+k];
+      }
+      # PTID and Date
+      Tau_change[l,1]<-Tau_SUVR[j,1];
+      Tau_change[l,2]<-Tau_SUVR[j,2] - Tau_First[i,2];
+      # DXs
+      Tau_change[l,3]<-Tau_SUVR[j,4];
+      Tau_change[l,4]<-Tau_First[i,4];
+      # Rest
+      Tau_change[l,5]<-Tau_First[i,5];
+      Tau_change[l,6]<-Tau_First[i,6];
+      Tau_change[l,7]<-Tau_First[i,7];
+      Tau_change[l,8]<-Tau_First[i,8];
+      Tau_change[l,9]<-Tau_First[i,9];
+      Tau_change[l,10]<-Tau_First[i,10];
+      Tau_change[l,11]<-Tau_First[i,11];
+      
+      l=l+1;
+     }
+    }
+  }
+ }
+                          
+```
+
+```{r output}
+colnames(Tau_change) <-colnames(Tau_First)
+Tau_change<- Tau_change %>% 
+  rename(
+    Time= SCAN,
+    DXfirst = EXAMDATE,
+    DXlast = DX
+    )
+#colnames(Tau_change) <- c("PTID","Timechange", "DXfirst", "DXlast", "Age", "Gender", "Education","Ethic", "Ethiccate","Marry","APOE4")
+#write.xlsx(Tau_change, 'Tau_changed.xlsx')
+```
+```{r delete CN}
+Tau_noCN <- Tau_change[which(Tau_change$DXlast!='CN'), ]
+Tau_noCN$...1 <- NULL
+```
+
+
+
+## Amyloid Statistic
+
+#### Useful part
+
+```{r import p value}
+
+temp <- as.data.frame(Tau_change[,12:159])
+
+storage <- list()
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Tau_change$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["Tau_change$Time"])
+}
+
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Tau_change$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta", "p-value")
+#max(result)
+```
+
+
+
+```{r linear regression}
+
+fit1<-lm(Tau_noCN$`Node 147` ~ Tau_noCN$Time)
+fit1$coefficients
+plot(Tau_noCN$`Node 147` ~ Tau_noCN$Time)+
+  abline(fit1)
+```
+```{r import p value}
+
+temp <- as.data.frame(Tau_noCN[,12:159])
+
+storage <- list()
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Tau_noCN$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["Tau_noCN$Time"])
+}
+
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Tau_noCN$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta", "p-value")
+#max(result)
+```
+
+```{r delete CN}
+Tau_CN <- Tau_change[which(Tau_change$DXlast=='CN'), ]
+Tau_CN$...1 <- NULL
+
+Tau_AD <- Tau_change[which(Tau_change$DXlast=='AD'), ]
+Tau_AD$...1 <- NULL
+
+Amyloid_LMCI <- Tau_change[which(Tau_change$DXlast=='LMCI'), ]
+Tau_AD$...1 <- NULL
+
+Amyloid_EMCI <- Tau_change[which(Tau_change$DXlast=='EMCI'), ]
+Amyloid_EMCI$...1 <- NULL
+```
+
+```{r node analysis}
+## AD
+temp <- Tau_AD[12:159]
+tau_ADmean<- as.data.frame(colMeans(temp))
+mean(ADmean$`colMeans(temp)`)
+
+## CN
+temp <- Tau_CN[12:159]
+tau_CNmean<- as.data.frame(colMeans(temp))
+mean(CNmean$`colMeans(temp)`)
+
+
+```
+```{r rowmean-AD}
+temp <- Tau_AD[c(12:159)]
+Tau_mean<-as.data.frame(rowMeans(temp))
+Tau_mean[,2]<-Tau_AD[,2]
+
+fit3<-lm(Tau_mean$`rowMeans(temp)` ~ Tau_mean$V2)
+plot(Tau_mean$`rowMeans(temp)` ~ Tau_mean$V2)+
+  abline(fit3)
+```
+```{r rowmean-NC}
+temp2 <- Tau_CN[c(12:159)]
+Tau_CNmean<-as.data.frame(rowMeans(temp2))
+Tau_CNmean[,2]<-Tau_CN[,2]
+
+fit4<-lm(Tau_CNmean$`rowMeans(temp2)` ~ Tau_CNmean$V2)
+plot(Tau_CNmean$`rowMeans(temp2)` ~ Tau_CNmean$V2)+
+  abline(fit4)
+```

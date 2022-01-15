@@ -1,0 +1,519 @@
+---
+title: "rocauc"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(stringr)
+library(purrr)
+library(RVenn)
+library(ggplot2)
+library(ggVennDiagram)
+library(VennDiagram)
+library(cutpointr)
+
+library(dplyr)
+library(tidyr)
+```
+
+
+
+```{r}
+FDG_SUVR  <- read_excel("~/Downloads/FDG_SUVR.xlsx")
+Amyloid_SUVR <- read_excel("~/Downloads/Amyloid_SUVR.xlsx")
+Tau_SUVR  <- read_excel("~/Downloads/Tau_SUVR.xlsx")
+ 
+#Tau_0926 <- na.omit(Tau_0926, cols=c("DX", "APOE4","EXAMDATE"))
+```
+
+
+```{r}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+Amyloid_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+Amyloid_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_first[i,] <- Amyloid_SUVR[min(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+Amyloid_last[i,] <- Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+
+colnames(Amyloid_first)<-colnames(Amyloid_SUVR)
+colnames(Amyloid_last)<-colnames(Amyloid_SUVR)
+```
+
+```{r}
+SIGN_Tau0<-na.omit(Tau_SUVR, cols=c("DX","EXAMDATE"))
+SIGN_Amyloid0<-na.omit(Amyloid_last, cols=c("DX","EXAMDATE"))
+SIGN_FDG0<-na.omit(FDG_SUVR, cols=c("DX","EXAMDATE"))
+ 
+SIGN_FDG0<-SIGN_FDG0[SIGN_FDG0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+SIGN_Tau0<-SIGN_Tau0[SIGN_Tau0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+SIGN_Amyloid0<-SIGN_Amyloid0[SIGN_Amyloid0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+
+```
+
+```{r}
+SIGN_Amyloid0$AD<-SIGN_Amyloid0$DX
+summary(as.factor(SIGN_Amyloid0$DX))
+```
+
+
+```{r}
+for (i in 1:nrow(SIGN_Amyloid0)){
+  if (SIGN_Amyloid0[i,4]=="LMCI"  )  {
+    SIGN_Amyloid0[i,4]="AD"
+  }
+  else if (SIGN_Amyloid0[i,4]=="EMCI") {
+    SIGN_Amyloid0[i,4]="CN"
+  }
+  else if (SIGN_Amyloid0[i,4]=="SMC") {
+    SIGN_Amyloid0[i,4]="CN"
+  }
+}
+summary(as.factor(SIGN_Amyloid0$DX))
+ 
+SIGN_Tau0$AD<-SIGN_Tau0$DX
+summary(as.factor(SIGN_Tau0$DX))
+
+for (i in 1:nrow(SIGN_Tau0)){
+  if (SIGN_Tau0[i,4]=="LMCI"  )  {
+    SIGN_Tau0[i,4]="AD"
+  }
+  else if (SIGN_Tau0[i,4]=="EMCI") {
+    SIGN_Tau0[i,4]="CN"
+  }
+  else if (SIGN_Tau0[i,4]=="SMC") {
+    SIGN_Tau0[i,4]="CN"
+  }
+}
+summary(as.factor(SIGN_Tau0$DX))
+ 
+SIGN_FDG0$AD<-SIGN_FDG0$DX
+summary(as.factor(SIGN_FDG0$DX))
+
+for (i in 1:nrow(SIGN_FDG0)){
+  if (SIGN_FDG0[i,4]=="LMCI"  )  {
+    SIGN_FDG0[i,4]="AD"
+  }
+  else if (SIGN_FDG0[i,4]=="EMCI") {
+    SIGN_FDG0[i,4]="CN"
+  }
+  else if (SIGN_FDG0[i,4]=="SMC") {
+    SIGN_FDG0[i,4]="CN"
+  }
+}
+summary(as.factor(SIGN_FDG0$DX))
+```
+
+
+
+```{r}
+ #test_fdg$MEAN<-apply(test_fdg[,c(12:159)], 1, mean)
+
+SIGN_Tau0$MEAN<-apply(SIGN_Tau0[,c(12:159)], 1, mean)
+SIGN_Amyloid0$MEAN<-apply(SIGN_Amyloid0[,c(12:159)], 1, mean)
+SIGN_FDG0$MEAN<-apply(SIGN_FDG0[,c(12:159)], 1, mean)
+```
+ 
+
+```{r}
+df<-SIGN_FDG0[which(SIGN_FDG0$AD %in% c("CN", "AD") ),]
+cp_fdg <- cutpointr( df, MEAN, AD, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_fdg)
+
+plot(cp_fdg)
+
+```
+```{r}
+df<-SIGN_Amyloid0[which(SIGN_Amyloid0$AD %in% c("CN", "AD") ),]
+cp_amy <- cutpointr( df, MEAN, AD, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_amy)
+
+plot(cp_amy)
+
+
+```
+
+
+```{r}
+df<-SIGN_Tau0[which(SIGN_Tau0$AD %in% c("CN", "AD") ),]
+cp_tau <- cutpointr(df, MEAN, AD, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_tau)
+
+plot(cp_tau)
+
+
+```
+
+
+
+
+
+ 
+Positive Predictive Value PPV = true positives / total positives (true and false)
+Negative Predictive Value NPV = true negatives / total negatives (true and false)
+```{r}
+SIGN_FDG0<-SIGN_FDG0[SIGN_FDG0$DX %in% c("AD", "CN"),]
+SIGN_Tau0<-SIGN_Tau0[SIGN_Tau0$DX %in% c("AD", "CN"),]
+SIGN_Amyloid0<-SIGN_Amyloid0[SIGN_Amyloid0$DX %in% c("AD", "CN" ),]
+```
+
+```{r}
+ #test_fdg$MEAN<-apply(test_fdg[,c(12:159)], 1, mean)
+
+SIGN_Tau0$MEAN<-apply(SIGN_Tau0[,c(12:159)], 1, mean)
+SIGN_Amyloid0$MEAN<-apply(SIGN_Amyloid0[,c(12:159)], 1, mean)
+SIGN_FDG0$MEAN<-apply(SIGN_FDG0[,c(12:159)], 1, mean)
+```
+ 
+
+```{r}
+df<-SIGN_FDG0[which(SIGN_FDG0$AD %in% c("CN", "AD") ),]
+cp_fdg <- cutpointr( df, MEAN, AD, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_fdg)
+
+plot(cp_fdg)
+
+```
+```{r}
+df<-SIGN_Amyloid0[which(SIGN_Amyloid0$AD %in% c("CN", "AD") ),]
+cp_amy <- cutpointr( df, MEAN, AD, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_amy)
+
+plot(cp_amy)
+
+
+```
+
+
+```{r}
+df<-SIGN_Tau0[which(SIGN_Tau0$AD %in% c("CN", "AD") ),]
+cp_tau <- cutpointr(df, MEAN, AD, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_tau)
+
+plot(cp_tau)
+
+
+```
+
+
+
+
+
+
+
+
+
+# Performance per 148 node
+```{r}
+auc_performance<- as.data.frame(matrix(0,148,3))
+
+SIGN_Tau0<-na.omit(Tau_SUVR, cols=c("DX","EXAMDATE"))
+SIGN_Amyloid0<-na.omit(Amyloid_SUVR, cols=c("DX","EXAMDATE"))
+SIGN_FDG0<-na.omit(FDG_SUVR, cols=c("DX","EXAMDATE"))
+ 
+SIGN_FDG0<-SIGN_FDG0[SIGN_FDG0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+SIGN_Tau0<-SIGN_Tau0[SIGN_Tau0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+SIGN_Amyloid0<-SIGN_Amyloid0[SIGN_Amyloid0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+
+```
+
+```{r}
+for (i in 1:nrow(SIGN_Amyloid0)){
+  if (SIGN_Amyloid0[i,4]=="LMCI"  )  {
+    SIGN_Amyloid0[i,4]="AD"
+  }
+  else if (SIGN_Amyloid0[i,4]=="EMCI") {
+    SIGN_Amyloid0[i,4]="CN"
+  }
+  else if (SIGN_Amyloid0[i,4]=="SMC") {
+    SIGN_Amyloid0[i,4]="CN"
+  }
+}
+
+for (i in 1:nrow(SIGN_Tau0)){
+  if (SIGN_Tau0[i,4]=="LMCI"  )  {
+    SIGN_Tau0[i,4]="AD"
+  }
+  else if (SIGN_Tau0[i,4]=="EMCI") {
+    SIGN_Tau0[i,4]="CN"
+  }
+  else if (SIGN_Tau0[i,4]=="SMC") {
+    SIGN_Tau0[i,4]="CN"
+  }
+}
+
+
+for (i in 1:nrow(SIGN_FDG0)){
+  if (SIGN_FDG0[i,4]=="LMCI"  )  {
+    SIGN_FDG0[i,4]="AD"
+  }
+  else if (SIGN_FDG0[i,4]=="EMCI") {
+    SIGN_FDG0[i,4]="CN"
+  }
+  else if (SIGN_FDG0[i,4]=="SMC") {
+    SIGN_FDG0[i,4]="CN"
+  }
+}
+
+```
+```{R}
+
+for (i in 1:148){
+
+  SIGN_Tau0$MEAN<-apply(SIGN_Tau0[,11+i],1,mean)
+  SIGN_Amyloid0$MEAN<-apply(SIGN_Amyloid0[,11+i],1,mean)
+  SIGN_FDG0$MEAN<-apply(SIGN_FDG0[,11+i],1,mean)
+
+
+  cp_amy <- cutpointr(SIGN_Amyloid0, MEAN, DX,  direction = ">=", pos_class = "AD", method = oc_youden_normal, metric = youden)
+  cp_tau <- cutpointr(SIGN_Tau0, MEAN, DX,  direction = ">=", pos_class = "AD", method = oc_youden_normal, metric = youden)
+  cp_fdg <- cutpointr(SIGN_FDG0, MEAN, DX,  direction = ">=", pos_class = "AD", method = oc_youden_normal, metric = youden)
+  auc_performance[i,1]<-summary(cp_amy)$cutpointr[[1]]$AUC
+  auc_performance[i,2]<-summary(cp_tau)$cutpointr[[1]]$AUC
+  auc_performance[i,3]<-summary(cp_fdg)$cutpointr[[1]]$AUC
+  
+}
+
+
+
+```
+
+```{r}
+ggplot(auc_performance, aes(1:148)) + 
+  geom_smooth(aes(y = V1, colour = "Amyloid")) + 
+  geom_smooth(aes(y = V2, colour = "Tau"))+
+  geom_smooth(aes(y = 1-V3, colour = "FDG"))+
+  ylab("AUC")+
+  xlab("Node 1~148")
+
+```
+### see anyone here
+
+# Performance per 148 node
+```{r}
+auc_performance<- as.data.frame(matrix(0,148,3))
+
+SIGN_Tau0<-na.omit(Tau_SUVR, cols=c("DX","EXAMDATE"))
+SIGN_Amyloid0<-na.omit(Amyloid_SUVR, cols=c("DX","EXAMDATE"))
+SIGN_FDG0<-na.omit(FDG_SUVR, cols=c("DX","EXAMDATE"))
+ 
+SIGN_FDG0<-SIGN_FDG0[SIGN_FDG0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+SIGN_Tau0<-SIGN_Tau0[SIGN_Tau0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+SIGN_Amyloid0<-SIGN_Amyloid0[SIGN_Amyloid0$DX %in% c("AD", "CN", "EMCI", "LMCI", "SMC" ),]
+
+```
+
+```{r}
+for (i in 1:nrow(SIGN_Amyloid0)){
+  if (SIGN_Amyloid0[i,4]=="LMCI"  )  {
+    SIGN_Amyloid0[i,4]="AD"
+  }
+  else if (SIGN_Amyloid0[i,4]=="EMCI") {
+    SIGN_Amyloid0[i,4]="CN"
+  }
+  else if (SIGN_Amyloid0[i,4]=="SMC") {
+    SIGN_Amyloid0[i,4]="CN"
+  }
+}
+
+for (i in 1:nrow(SIGN_Tau0)){
+  if (SIGN_Tau0[i,4]=="LMCI"  )  {
+    SIGN_Tau0[i,4]="AD"
+  }
+  else if (SIGN_Tau0[i,4]=="EMCI") {
+    SIGN_Tau0[i,4]="CN"
+  }
+  else if (SIGN_Tau0[i,4]=="SMC") {
+    SIGN_Tau0[i,4]="CN"
+  }
+}
+
+
+for (i in 1:nrow(SIGN_FDG0)){
+  if (SIGN_FDG0[i,4]=="LMCI"  )  {
+    SIGN_FDG0[i,4]="AD"
+  }
+  else if (SIGN_FDG0[i,4]=="EMCI") {
+    SIGN_FDG0[i,4]="CN"
+  }
+  else if (SIGN_FDG0[i,4]=="SMC") {
+    SIGN_FDG0[i,4]="CN"
+  }
+}
+
+```
+```{R}
+
+for (i in 1:148){
+
+  SIGN_Tau0$MEAN<-apply(SIGN_Tau0[,11+i],1,mean)
+  SIGN_Amyloid0$MEAN<-apply(SIGN_Amyloid0[,11+i],1,mean)
+  SIGN_FDG0$MEAN<-apply(SIGN_FDG0[,11+i],1,mean)
+
+
+  cp_amy <- cutpointr(SIGN_Amyloid0, MEAN, DX,  direction = ">=", pos_class = "AD", method = oc_youden_normal, metric = youden)
+  cp_tau <- cutpointr(SIGN_Tau0, MEAN, DX,  direction = ">=", pos_class = "AD", method = oc_youden_normal, metric = youden)
+  cp_fdg <- cutpointr(SIGN_FDG0, MEAN, DX,  direction = ">=", pos_class = "AD", method = oc_youden_normal, metric = youden)
+  auc_performance[i,1]<-summary(cp_amy)$cutpointr[[1]]$optimal_cutpoint
+  auc_performance[i,2]<-summary(cp_tau)$cutpointr[[1]]$optimal_cutpoint
+  auc_performance[i,3]<-summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+  
+}
+
+
+
+```
+
+## check for whether it is AD or NC
+```{r}
+Amyloid_perfromance<- as.data.frame(matrix(0,nrow(SIGN_Amyloid0),149))
+Tau_perfromance<- as.data.frame(matrix(0,nrow(SIGN_Tau0),149))
+FDG_perfromance<- as.data.frame(matrix(0,nrow(SIGN_FDG0),149))
+Amyloid_perfromance$V1<-SIGN_Amyloid0$PTID
+Tau_perfromance$V1<-SIGN_Tau0$PTID
+FDG_perfromance$V1<-SIGN_FDG0$PTID
+
+```
+
+## for loop for ad
+```{r}
+for (i in 1:148){
+
+  Amyloid_perfromance[,i+1]<-as.numeric(SIGN_Amyloid0[,11+i]>auc_performance[i,1]) ## 1 is AD ## 0 is NC
+  Tau_perfromance[,i+1]<-as.numeric(SIGN_Tau0[,11+i]>auc_performance[i,2]) ## 1 is AD ## 0 is NC
+  FDG_perfromance[,i+1]<-as.numeric(SIGN_FDG0[,11+i]<auc_performance[i,3]) ## 0 is AD ## 1 is NC
+}
+
+```
+
+```{r}
+a<-as.data.frame(rowSums(Amyloid_perfromance[,2:149]))
+b<-as.data.frame(rowSums(Tau_perfromance[,2:149]))
+c<-as.data.frame(rowSums(FDG_perfromance[,2:149]))
+
+a<-cbind(a,1:2628)
+b<-cbind(b,1:537)
+c<-cbind(c,1:3405)
+```
+
+
+```{r}
+a[,2]<-as.numeric(a[,1]>74) ## 1 is AD ## 0 is NC
+b[,2]<-as.numeric(b[,1]>74) ## 1 is AD ## 0 is NC
+c[,2]<-as.numeric(c[,1]<74) ## 0 is AD ## 1 is NC
+```
+##back to rejoin
+```{r}
+SIGN_Amyloid0$newmodel <- a$`1:2628`
+SIGN_Tau0$newmodel <- b$`1:537`
+SIGN_FDG0$newmodel <-c$`1:3405`
+
+
+```
+
+
+```{r}
+df<-SIGN_FDG0[which(SIGN_FDG0$newmodel %in% c("1", "0") ),]
+cp_fdg <- cutpointr( df, MEAN, newmodel, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_fdg)
+
+plot(cp_fdg)
+
+```
+```{r}
+df<-SIGN_Amyloid0[which(SIGN_Amyloid0$newmodel %in% c("1", "0") ),]
+cp_amy <- cutpointr( df, MEAN, newmodel, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_amy)
+
+plot(cp_amy)
+
+
+```
+
+
+```{r}
+df<-SIGN_Tau0[which(SIGN_Tau0$newmodel %in% c("1", "0") ),]
+cp_tau <- cutpointr(df, MEAN, newmodel, 
+                method = oc_youden_normal, metric = youden)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_tau)
+
+plot(cp_tau)
+
+
+```
+
+
+
+
+
+
+
+for (i in nrow(Amyloid_perfromance)){
+  if(Amyloid_perfromance[i,1]<74){
+    a[i,2] = "NC"
+  } else {
+    a[i,2] = "AD"
+  }
+}
+
+
+for (i in nrow(Tau_perfromance)){
+  if(Tau_perfromance[i,1]<74){
+    b[i,2] = "NC"
+  } else {
+    b[i,2] = "AD"
+  }
+}
+
+for (i in nrow(FDG_perfromance)){
+  if(FDG_perfromance[i,1]>74){
+    c[i,2] = "NC"
+  } else {
+    c[i,2] = "AD"
+  }
+}
+```
+
+
+```{r}
+ #test_fdg$MEAN<-apply(test_fdg[,c(12:159)], 1, mean)
+
+SIGN_Tau0$MEAN<-apply(SIGN_Tau0[,c(12:159)], 1, mean)
+SIGN_Amyloid0$MEAN<-apply(SIGN_Amyloid0[,c(12:159)], 1, mean)
+SIGN_FDG0$MEAN<-apply(SIGN_FDG0[,c(12:159)], 1, mean)
+```
+ 
+
+```{r}
+df<-SIGN_FDG0[which(SIGN_FDG0$AD %in% c("CN", "AD") ),]
+cp_fdg <- cutpointr( df, MEAN, DX, 
+                method = maximize_metric, metric = sum_sens_spec)
+#summary(cp_fdg)$cutpointr[[1]]$optimal_cutpoint
+summary(cp_fdg)
+
+```

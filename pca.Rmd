@@ -1,0 +1,334 @@
+---
+title: "7.19开始"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+
+```
+# Amyloid 
+
+```{r}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>2),]
+ 
+Amyloid_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+Amyloid_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_first[i,] <- Amyloid_SUVR[min(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+Amyloid_last[i,] <- Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+colnames(Amyloid_first) <- colnames(Amyloid_SUVR)
+colnames(Amyloid_last) <- colnames(Amyloid_SUVR)
+```
+
+
+
+```{r}
+
+k2 <- kmeans(Amyloid_last[,c(12:159)], centers = 2, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = Amyloid_last[,c(12:159)])
+```
+
+
+```{r}
+
+
+# function to compute total within-cluster sum of square 
+wss <- function(k) {
+  kmeans(Amyloid_last[,c(12:159)], k, nstart = 25 )$tot.withinss
+}
+
+# Compute and plot wss for k = 1 to k = 15
+k.values <- 1:15
+
+# extract wss for 2-15 clusters
+wss_values <- map_dbl(k.values, wss)
+
+plot(k.values, wss_values,
+       type="b", pch = 19, frame = FALSE, 
+       xlab="Number of clusters K",
+       ylab="Total within-clusters sum of squares")
+
+```
+
+```{r}
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(Amyloid_last[,c(12:159)], centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(Amyloid_last[,c(12:159)]))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+fviz_nbclust(Amyloid_last[,c(12:159)], kmeans, method = "silhouette")
+```
+
+
+
+
+
+
+```{r}
+
+k2 <- kmeans(Amyloid_first[,c(12:159)], centers = 2, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = Amyloid_first[,c(12:159)])
+```
+
+```{r}
+Amyloid_first[,c(12:159)] %>%
+  as_tibble() %>%
+  mutate(cluster = k2$cluster,
+         state = row.names(Amyloid_first[,c(12:159)])) %>%
+  ggplot(aes(Amyloid_first$`Node 1`, Amyloid_first$`Node 2`, color = factor(cluster), label = state)) +
+  geom_text()
+
+```
+
+
+```{r}
+
+
+# function to compute total within-cluster sum of square 
+wss <- function(k) {
+  kmeans(Amyloid_first[,c(12:159)], k, nstart = 25 )$tot.withinss
+}
+
+# Compute and plot wss for k = 1 to k = 15
+k.values <- 1:15
+
+# extract wss for 2-15 clusters
+wss_values <- map_dbl(k.values, wss)
+
+plot(k.values, wss_values,
+       type="b", pch = 19, frame = FALSE, 
+       xlab="Number of clusters K",
+       ylab="Total within-clusters sum of squares")
+
+```
+
+```{r}
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(Amyloid_first[,c(12:159)], centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(Amyloid_first[,c(12:159)]))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+fviz_nbclust(Amyloid_first[,c(12:159)], kmeans, method = "silhouette")
+```
+
+# Tau
+```{r}
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>2),]
+ 
+Tau_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+Tau_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_first[i,] <- Tau_SUVR[min(which(Tau_SUVR$PTID == TABLE$Var1[i])), ]
+
+Tau_last[i,] <- Tau_SUVR[max(which(Tau_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+colnames(Tau_first) <- colnames(Tau_SUVR)
+colnames(Tau_last) <- colnames(Tau_SUVR)
+```
+
+
+
+```{r}
+
+k2 <- kmeans(Tau_last[,c(12:159)], centers = 4, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = Tau_last[,c(12:159)])
+```
+
+```{r}
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(Tau_last[,c(12:159)], centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(Tau_last[,c(12:159)]))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+fviz_nbclust(Tau_last[,c(12:159)], kmeans, method = "silhouette")
+```
+
+
+
+
+# Tau_First
+
+```{r}
+
+k2 <- kmeans(Tau_first[,c(12:159)], centers = 4, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = Tau_first[,c(12:159)])
+```
+
+```{r}
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(Tau_first[,c(12:159)], centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(Tau_first[,c(12:159)]))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+fviz_nbclust(Tau_first[,c(12:159)], kmeans, method = "silhouette")
+```
+
+
+
+
+# FDG
+```{r}
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>2),]
+ 
+FDG_first<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+FDG_last<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+for (i in 1:nrow(TABLE)){
+FDG_first[i,] <- FDG_SUVR[min(which(FDG_SUVR$PTID == TABLE$Var1[i])), ]
+
+FDG_last[i,] <- FDG_SUVR[max(which(FDG_SUVR$PTID == TABLE$Var1[i])), ]
+
+}
+colnames(FDG_first) <- colnames(FDG_SUVR)
+colnames(FDG_last) <- colnames(FDG_SUVR)
+```
+
+
+
+```{r}
+
+k2 <- kmeans(FDG_last[,c(12:159)], centers = 3, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = FDG_last[,c(12:159)])
+```
+
+
+
+
+```{r}
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(FDG_last[,c(12:159)], centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(FDG_last[,c(12:159)]))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+fviz_nbclust(FDG_last[,c(12:159)], kmeans, method = "silhouette")
+```
+
+
+
+```{r}
+
+k2 <- kmeans(FDG_first[,c(12:159)], centers = 2, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = FDG_first[,c(12:159)])
+```
+
+```{r}
+
+# function to compute average silhouette for k clusters
+avg_sil <- function(k) {
+  km.res <- kmeans(FDG_first[,c(12:159)], centers = k, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(FDG_first[,c(12:159)]))
+  mean(ss[, 3])
+}
+
+# Compute and plot wss for k = 2 to k = 15
+k.values <- 2:15
+
+# extract avg silhouette for 2-15 clusters
+avg_sil_values <- map_dbl(k.values, avg_sil)
+
+plot(k.values, avg_sil_values,
+       type = "b", pch = 19, frame = FALSE, 
+       xlab = "Number of clusters K",
+       ylab = "Average Silhouettes")
+fviz_nbclust(FDG_first[,c(12:159)], kmeans, method = "silhouette")
+```
+
+
+
+```{r}
+
+company_increase <- read.csv(file = "/Users/laurentzhang/Downloads/bse_new_company_bse.csv")
+
+company_increase <-cbind(company_increase,c(1:43))
+```
+```{r}
+
+ggplot(company_increase,aes(x= company_increase$`c(1:43)`, y=company_increase$company_cnt)) +
+  geom_point()+
+  geom_smooth()
+
+```

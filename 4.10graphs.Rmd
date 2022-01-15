@@ -1,0 +1,649 @@
+---
+title: "4.10fourgraphs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r cars}
+#Tau_320<-Tau_Last[which(pred22$PTID %in% Tau_Last$PTID),]
+Patient320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+```
+```{r}
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(FDG_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+FDG_Last<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+for (i in 1:nrow(TABLE)){
+FDG_Last[i,] <- as.data.frame(FDG_SUVR[max(which(FDG_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(FDG_Last) <- colnames(FDG_SUVR)
+
+```
+
+```{r}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+Amyloid_Last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_Last[i,] <- as.data.frame(Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Amyloid_Last) <- colnames(Amyloid_SUVR)
+
+```
+
+
+```{r}
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(Tau_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+Tau_Last<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_Last[i,] <- as.data.frame(Tau_SUVR[max(which(Tau_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Tau_Last) <- colnames(Tau_SUVR)
+
+```
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+FDG_320<-FDG_Last[which(Patient320$PTID %in% FDG_Last$PTID),]
+Tau_320<-Tau_Last[which(Patient320$PTID %in% Tau_Last$PTID),]
+Amyloid_320<-Amyloid_Last[which(Patient320$PTID %in% Amyloid_Last$PTID),]
+Tau_320<-Tau_320 %>% 
+  filter(Tau_320$PTID != "NULL")
+```
+
+## Based column
+
+```{r}
+ATN320<-cbind(as.data.frame(colMeans(Amyloid_320[,c(12:159)])), 
+      as.data.frame(colMeans(Tau_320[,c(12:159)])),
+      as.data.frame(colMeans(FDG_320[,c(12:159)])))
+colnames(ATN320)<-c("Amyloid","Tau","FDG")
+
+```
+```{r}
+
+summary(lm(ATN320$FDG~ATN320$Amyloid))
+```
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(ATN320, aes(x =  Amyloid, y = FDG)) +
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="FDG", x="Amyloid")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(ATN320$FDG),max(ATN320$FDG)) + 
+  xlim(min(ATN320$Amyloid),max(ATN320$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.2, x = 2.1, parse = TRUE, label = "r^2 == 0.15", size=10 )
+ATdiff
+
+ggsave(
+  file="NvsA.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+```{r T VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(ATN320, aes(x =  FDG, y = Tau)) +
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="Tau", x="FDG")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(ATN320$Tau),max(ATN320$Tau)) + 
+  xlim(min(ATN320$FDG),max(ATN320$FDG))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.85, x = 1.1, parse = TRUE, label = "r^2 == 0.17", size=10 )
+ATdiff
+
+ggsave(
+  file="TvsN.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+```{r A VS T}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(ATN320, aes(x =  Tau, y = Amyloid)) +
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="Amyloid", x="Tau")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(ATN320$Amyloid),max(ATN320$Amyloid)) + 
+  xlim(min(ATN320$Tau),1.91)+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.4, x = 1.75, parse = TRUE, label = "r^2 == 0.26", size=10 )
+ATdiff
+
+ggsave(
+  file="AvsT.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+#### 320 average subject
+```{r}
+Patient320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+
+```
+
+```{r}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+Amyloid_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_First[i,] <- as.data.frame(Amyloid_SUVR[max(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Amyloid_First) <- colnames(Amyloid_SUVR)
+
+```
+
+```{r}
+
+TABLE<-data.frame(table(Tau_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+Tau_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Tau_SUVR)))
+for (i in 1:nrow(TABLE)){
+Tau_First[i,] <- as.data.frame(Tau_SUVR[max(which(Tau_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Tau_First) <- colnames(Tau_SUVR)
+
+```
+
+```{r}
+
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+FDG_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+for (i in 1:nrow(TABLE)){
+FDG_First[i,] <- as.data.frame(FDG_SUVR[max(which(FDG_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(FDG_First) <- colnames(FDG_SUVR)
+
+```
+
+## Calculate row means
+```{r}
+FDG_new<-FDG_First[which(FDG_First$PTID %in% Patient320$PTID),]
+Tau_new<-Tau_First[which(Tau_First$PTID %in% Patient320$PTID),]
+Amyloid_new<-Amyloid_First[which(Amyloid_First$PTID %in% Patient320$PTID),]
+```
+
+```{r}
+
+ATN_first<-cbind(as.data.frame(rowMeans(Amyloid_new[,c(12:159)])), 
+      as.data.frame(rowMeans(Tau_new[,c(12:159)])),
+      as.data.frame(rowMeans(FDG_new[,c(12:159)])),Amyloid_new$DX)
+colnames(ATN_first)<-c("Amyloid","Tau","FDG","DX")
+
+```
+```{r combine last}
+ATN_first$DX<-Amyloid_new$DX
+
+```
+
+```{r}
+
+# regroup patients to CN MCI AD according the last scan label "ncthick$DX"
+
+ for (i in 1:nrow(ATN_first)){
+  if (ATN_first[i,4]=="LMCI"  )  {
+    ATN_first[i,4]="AD"
+  }
+  else if (ATN_first[i,4]=="EMCI") {
+    ATN_first[i,4]="MCI"
+  }
+  else if (ATN_first[i,4]=="SMC"|ATN_first[i,4]=="CN") {
+    ATN_first[i,4]="NC"
+  }
+}
+```
+
+```{r}
+
+summary(lm(ATN_first$Amyloid~ATN_first$Tau))
+```
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(ATN_first, aes(x =  Amyloid, y = FDG, color=DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="FDG", x="Amyloid")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(ATN_first$FDG),1.3) + 
+  xlim(min(ATN_first$Amyloid),max(ATN_first$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.025,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.68, x = 2.775, parse = TRUE, label = "r^2 == 0.0001", size=10 )
+
+ATdiff
+
+ggsave(
+  file="NA.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+```{r T VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(ATN_first, aes(x =  FDG, y = Tau, color=DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="Tau", x="FDG")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(ATN_first$Tau),2.3) + 
+  xlim(min(ATN_first$FDG),max(ATN_first$FDG))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.025,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.1, x = 1.475, parse = TRUE, label = "r^2 == 0.002", size=10 )
+ATdiff
+
+ggsave(
+  file="TN.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+```{r A VS T}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(ATN_first, aes(x =  Tau, y = Amyloid, color =DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="Amyloid", x="Tau")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(ATN_first$Amyloid),2.8) + 
+  xlim(min(ATN_first$Tau),max(ATN_first$Tau))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.025,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.25, x = 3.05, parse = TRUE, label = "r^2 == 0.15", size=10 )
+ATdiff
+
+ggsave(
+  file="AT.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+## Predict 22 start here
+```{r}
+#pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(pred22[,c(297:444)]))
+pred_320<-as.data.frame(rowMeans(pred22[,c(297:444)]))
+
+colnames(pred_148)<-c("Prediction")
+colnames(pred_320)<-c("Prediction_320")
+```
+```{r 148 nodes}
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","FDG")
+
+Pred320<-cbind(rowMeans(pred22[,c(3:150)]),pred_320,pred_320)
+
+colnames(Pred320)<-c("FDG","Prediction","DX")
+
+```
+```{r}
+Pred320$DX<-FDG_new$DX
+
+```
+```{r}
+ for (i in 1:nrow(Pred320)){
+  if (Pred320[i,3]=="LMCI"  )  {
+    Pred320[i,3]="AD"
+  }
+  else if (Pred320[i,3]=="EMCI"|Pred320[i,3]=="CN") {
+    Pred320[i,3]="MCI"
+  }
+  else if (Pred320[i,3]=="SMC"|Pred320[i,3]=="CN") {
+    Pred320[i,3]="NC"
+  }
+}
+```
+```{r}
+summary(lm(Pred148$Prediction~Pred148$FDG))
+
+
+for (i in 1:nrow(Pred320)){
+  if (Pred320[i,3]=="CN"  )  {
+    Pred320[i,3]="NC"
+  }
+}
+```
+```{r prediction}
+
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+pred22<-Pred_updated
+
+
+```
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred148, aes(y =  FDG, x = Prediction)) +
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="[N] - node", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  ylim(min(Pred148$FDG),max(Pred148$FDG))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.55, x = 0.85, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+
+ggsave(
+  file="FDGvsPred.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+```{r}
+summary(lm(Pred320$Prediction~Pred320$FDG))
+```
+```{r}
+save(Pred320, file = "Graph_Pred320.Rda")
+save(Pred148, file = "Graph_Pred148.Rda")
+```
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred320, aes(y =  Prediction, x = FDG, color = DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="[N] - subject ", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Pred320$FDG),max(Pred320$FDG)) + 
+  ylim(min(Pred320$Prediction),1.2)+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.01,.89),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.74, x = 0.875, parse = TRUE, label = "r^2 == 0.13", size=10 )
+ATdiff
+
+ggsave(
+  file="FDGvsPred320.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```

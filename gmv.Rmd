@@ -1,0 +1,310 @@
+---
+title: "gmv"
+output: html_document
+---
+```{r}
+library(readxl)
+gmv<-read.csv(file = "/Users/laurentzhang/Downloads/gmvvalue.csv")
+```
+
+
+
+```{r}
+gmv$month<-c(1:504)
+
+
+```
+
+
+```{r}
+ggplot(gmv, aes(x=month,y=value,group = week,color = week)) + 
+  scale_color_gradient(low="blue", high="yellow")+
+  geom_line()+
+  ylab("gmv")+
+  xlab("day")
+```
+## fit a curve
+```{r}
+gmvvalue<-read.csv(file = "/Users/laurentzhang/Downloads/Book4.csv")
+gmvvalue<- cbind(gmvvalue,c(1:265))
+```
+## predict value
+```{r}
+value_modi<-gmvvalue %>%
+  slice(1:210)
+x=value_modi$week
+y=value_modi$value
+plot(x,y)
+library(drc)
+
+fm <- drm(y ~ x, fct = LL.5())
+
+new<-data.frame(week=c(1:210))
+plot(x,predict(fm,newdata = new))
+y_hat<-as.data.frame(predict(fm,newdata = new))
+```
+
+```{r}
+y_hat2<-cbind(y_hat,value_modi$value)
+ggplot(y_hat2, aes(x=c(1:210))) + 
+  geom_line(aes(y=y_hat2$`predict(fm, newdata = new)`),color ="red")+
+  geom_line(aes(y=y_hat2$`value_modi$value`),color ="blue")+
+  scale_x_continuous(breaks=c(0,52,56,104,108, 156,160,208,210))+
+  ylab("gmv")+
+  xlab("week")
+write.csv(y_hat2,'predicted_gmv.csv')
+```
+
+### gmv by workday
+
+```{r}
+gmvvalue<-read.csv(file = "/Users/laurentzhang/Downloads/gmvday.csv")
+value_modi<-gmvvalue[which(between(gmvvalue$weekday,1,5)),]%>%
+  slice(1:980)
+x=value_modi$day
+y=value_modi$gmv
+plot(x,y)
+library(drc)
+#value_modi<-value_modi%>% slice(1:1460)
+
+fm <- drm(y ~ x, fct = LL2.5())
+
+new<-data.frame(week=c(1:980))
+plot(x,predict(fm,newdata = new))
+y_hat<-as.data.frame(predict(fm,newdata = new))
+```
+
+
+```{r}
+y_hat3<-cbind(y_hat,value_modi$gmv)
+ggplot(y_hat3, aes(x=value_modi$day)) + 
+  geom_line(aes(y=y_hat3$`predict(fm, newdata = new)`),color ="red")+
+  geom_line(aes(y=value_modi$gmv),color ="blue")+
+  ylab("gmv")+
+  xlab("day")
+write.csv(y_hat2,'predicted_gmv_day.csv')
+```
+
+
+### gmv by workday
+
+```{r}
+gmvvalue<-read.csv(file = "/Users/laurentzhang/Downloads/gmvday.csv")
+value_modi<-gmvvalue %>%
+  slice(1:1460)
+x=value_modi$day
+y=value_modi$gmv
+plot(x,y)
+library(drc)
+#value_modi<-value_modi%>% slice(1:1460)
+
+fm <- drm(y ~ x, fct = LL2.5())
+
+new<-data.frame(week=c(1:1460))
+plot(x,predict(fm,newdata = new))
+y_hat<-as.data.frame(predict(fm,newdata = new))
+
+y_hat3<-cbind(y_hat,value_modi$gmv)
+ggplot(y_hat3, aes(x=value_modi$day)) + 
+  geom_line(aes(y=y_hat3$`predict(fm, newdata = new)`),color ="red")+
+  geom_line(aes(y=value_modi$gmv),color ="blue")+
+  scale_x_continuous(breaks=c(0,52,56,104,108, 156,160,208,210))+
+  ylab("gmv")+
+  xlab("day")
+```
+
+
+## GET RID OF OUTLIERS
+
+
+```{R}
+gmvvalue<-read.csv(file = "/Users/laurentzhang/Downloads/gmvday.csv")
+#value_modi<-gmvvalue[which(between(gmvvalue$weekday,1,5)),]%>%
+#  slice(1:980)
+value_modi<-gmvvalue %>% 
+  slice(1:1460)
+value_modi <- cbind(value_modi,y_hat,c(1:nrow(value_modi)),c(1:nrow(value_modi)))
+
+
+colnames(value_modi)<-c("day","gmv","weekday","predict","row","residual")
+```
+```{r}
+value_modi$residual <-value_modi$predict - value_modi$gmv
+
+a<-value_modi[which(value_modi$residual > 400000),]$row
+value_modi_outlier<-value_modi[-a,]
+
+x=value_modi_outlier$day
+y=value_modi_outlier$gmv
+library(drc)
+plot(x,y)
+fm2 <- drm(y ~ x, fct = LL.4())
+
+new<-data.frame(week=value_modi_outlier$day)
+plot(x,predict(fm2,newdata = new))
+y_hat4<-as.data.frame(predict(fm2,newdata = new))
+fm2
+```
+```{r}
+y_hat3<-cbind(y_hat4,value_modi_outlier$gmv)
+ggplot(y_hat3, aes(x=value_modi_outlier$day)) + 
+  geom_line(aes(y=y_hat4$`predict(fm2, newdata = new)`),color ="red",size = 3)+
+  geom_line(aes(y=value_modi_outlier$gmv),color ="blue")+
+  ylab("gmv")+
+  xlab("day")
+
+new<-data.frame(week=c(1:1460))
+y_hat4<-cbind(as.data.frame(predict(fm2,newdata = new)),value_modi$gmv)
+
+write.csv(y_hat4,'predicted_gmv_day.csv')
+```
+
+## real gmv
+```{r}
+
+value_final<-value_modi_outlier
+x=value_final$day
+y=value_final$gmv
+library(drc)
+
+fm_final <- drm(y ~ x, fct = LL.4())
+
+
+
+
+new_data<-data.frame(week=value_final$day)
+plot(w,predict(fm_final,newdata = new_data))
+y_hat4<-as.data.frame(predict(fm_final,newdata = new_data))
+```
+```{r}
+y_hat3<-cbind(y_hat4,value_modi_outlier$gmv)
+ggplot(y_hat3, aes(x=value_modi_outlier$day)) + 
+  geom_line(aes(y=y_hat4$`predict(fm_final, newdata = new_data)`),color ="red")+
+  geom_line(aes(y=value_modi_outlier$gmv),color ="blue")+
+  ylab("gmv")+
+  xlab("day")
+write.csv(y_hat2,'predicted_gmv_day.csv')
+```
+
+
+
+```{r}
+library(MASS)
+library(reshape2)
+library(reshape)
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+gmv_1 <- gmv[which(gmv$week==1),]
+gmv_2 <- gmv[which(gmv$week==2),]
+gmv_3 <- gmv[which(gmv$week==3),]
+gmv_4 <- gmv[which(gmv$week==4),]
+gmv_5 <- gmv[which(gmv$week==5),]
+gmv_6 <- gmv[which(gmv$week==6),]
+gmv_7 <- gmv[which(gmv$week==7),]
+
+gmv_total<-as.data.frame(cbind(gmv_1$value,gmv_2$value,gmv_3$value,gmv_4$value,gmv_5$value,gmv_6$value,gmv_7$value))
+
+```
+
+```{r}
+colnames(gmv_total)<-c("Mon","Tue","Wed","Thu","Fri","Sat","Sun")
+k2 <- kmeans(t(gmv_total), centers = 5, nstart = 25)
+str(k2)
+fviz_cluster(k2, data = t(gmv_total))
+fviz_nbclust(t(gmv_total), kmeans, method = "silhouette")
+```
+
+```{r}
+library(FactoMineR)
+gmv_transpose<-as.data.frame(t(gmv_total))
+res.pca <- PCA(gmv_transpose,  graph = FALSE)
+# Visualize eigenvalues/variances
+fviz_screeplot(res.pca, addlabels = TRUE, ylim = c(0,100))
+```
+
+## 月度权重比值
+
+```{r}
+
+library(readxl)
+gmv_month<-read.csv(file = "/Users/laurentzhang/Downloads/月度权重比值.csv")
+```
+```{r}
+gmv_final_month<-gmv_month %>%
+  slice(1:60)
+
+
+ggplot(gmv_final_month[,2:8], aes(x=c(1:60))) + 
+  scale_color_gradient(low="blue", high="yellow")+
+  geom_smooth(aes(y=gmv_final_month$mon),color ="red")+
+  geom_smooth(aes(y=gmv_final_month$tue),color ="blue")+
+  geom_smooth(aes(y=gmv_final_month$wed),color ="yellow")+
+  geom_smooth(aes(y=gmv_final_month$thu),color ="green")+
+  geom_smooth(aes(y=gmv_final_month$fri),color ="black")+
+  geom_smooth(aes(y=gmv_final_month$sat),color ="purple")+
+  geom_smooth(aes(y=gmv_final_month$sun),color ="white")+
+  
+  ylab("GMV of weigh")+
+  xlab("Month")+guides(size = "none"  )+
+  theme_bw()+
+  theme( aspect.ratio=4/5,
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.47,.02),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+```
+
+
+
+
+## 周度权重比值
+
+```{r}
+
+library(readxl)
+gmv_week<-read.csv(file = "/Users/laurentzhang/Downloads/gmvbyweek.csv")
+```
+```{r}
+gmv_final_week<-gmv_week %>%
+  slice(1:264)
+
+
+ggplot(gmv_final_week[,2:8], aes(x=c(1:264))) + 
+  scale_color_gradient(low="blue", high="yellow")+
+  geom_smooth(aes(y=gmv_final_week$mon),color ="red")+
+  geom_smooth(aes(y=gmv_final_week$tue),color ="blue")+
+  geom_smooth(aes(y=gmv_final_week$wed),color ="yellow")+
+  geom_smooth(aes(y=gmv_final_week$thu),color ="green")+
+  geom_smooth(aes(y=gmv_final_week$fri),color ="black")+
+  geom_smooth(aes(y=gmv_final_week$sat),color ="purple")+
+  geom_smooth(aes(y=gmv_final_week$sun),color ="white")+theme( aspect.ratio=4/5,
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.47,.02),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+```

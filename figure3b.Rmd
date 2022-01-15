@@ -1,0 +1,799 @@
+
+
+
+
+
+
+```{r A VS T}
+Patient320<-read.csv("~/Downloads/laplacian/PatientInfo320.csv")
+```
+
+```{r}
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+#group(PatientInfo320$DX)
+```
+
+```{r}
+
+TABLE<-data.frame(table(FDG_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>=1),]
+ 
+FDG_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(FDG_SUVR)))
+for (i in 1:nrow(TABLE)){
+FDG_First[i,] <- as.data.frame(FDG_SUVR[max(which(FDG_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(FDG_First) <- colnames(FDG_SUVR)
+
+FDG_new<-FDG_First[which(FDG_First$PTID %in% Patient320$PTID),]
+
+```
+
+
+## Amyloid plot
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320_ATN copy.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(1:148)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+x<-Pred148$Prediction
+y<-Pred148$Amyloid
+# Sygmoidal A
+
+ATdiff<- ggplot(Pred148, aes(y =  Amyloid, x = Prediction),)+
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm",se= T,color = "azure4",size=1.5)+
+  xlim(0,1) +
+  ylim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+      
+  labs(y="A SUVR", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.3, x = 0.81, parse = TRUE, label = "p == 0.00123", size=10 )+annotate("text", y =1.45, x = 0.865, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+ggsave(
+  file="Asyd.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+cor.test(Pred148$Amyloid,Pred148$Prediction,method=c("pearson"))$p.value
+```
+
+
+
+## Amyloid plot
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320_ATN copy.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(149:296)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+x<-Pred148$Prediction
+y<-Pred148$Amyloid
+# Sygmoidal A
+
+ATdiff<- ggplot(Pred148, aes(y =  Amyloid, x = Prediction),)+
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm",se= T,color = "azure4",size=1.5)+
+  xlim(0,1) +
+  ylim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+      
+  labs(y="T SUVR", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.105, x = 0.81, parse = TRUE, label = "p == 0", size=10 )+annotate("text", y =1.2, x = 0.865, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+ggsave(
+  file="Tsyd.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+cor.test(Pred148$Amyloid,Pred148$Prediction,method=c("pearson"))$p.value
+```
+
+
+## Amyloid plot
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320_ATN copy.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(297:444)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+x<-Pred148$Prediction
+y<-Pred148$Amyloid
+
+
+m<-nls(y~1/b*log((1/x)-1)+e, Pred148, start=list(b=-1, e=1))
+opar <- par(las = 1)
+
+#predict(m)
+opar <- par(las = 1)
+par(opar)
+tt <- seq(0, 2.5, length.out = 1000)
+
+
+
+plot(x,y, data = Pred148)
+lines(tt, predict(m, list(x = tt)))
+
+```
+# Sygmoidal N
+```{r sygmoidal}
+a<-predict(m, list(x = tt))
+data<-as.data.frame(cbind(a,tt))
+
+ATdiff<- ggplot(data=data, aes(y=a, x=tt))+
+  geom_line(size = 1.5,se=T, color ="darkblue")+
+  geom_point(data=Pred148,aes(y =  Amyloid, x = Prediction),size =3, color = "darkorange")+
+  geom_smooth(method="lm",se= T,color = "azure4",size=1.5)+
+  xlim(0,1) +
+  ylim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+      
+  labs(y="[N] SUVR", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.72, x = 0.865, parse = TRUE, label = "r^2 == 0.62", size=10 )+annotate("text", y =1.6, x = 0.81, parse = TRUE, label = "p == 0", size=10 )
+ATdiff
+ggsave(
+  file="Nsyd.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+```
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320_ATN copy.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(297:444)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+x<-Pred148$Prediction
+y<-Pred148$Amyloid
+
+
+m<-nls(y~1/b*log((1/x)-1)+e, Pred148, start=list(b=-1, e=1))
+
+
+tt <- seq(0.0001, 1.7, length.out = 800)
+
+
+```
+
+# Sygmoidal Amyloid graph
+```{r sygmoidal}
+a<-predict(m, list(x = tt))
+data<-as.data.frame(cbind(a,tt))
+
+ATdiff<- ggplot(data=data, aes(y=a, x=tt))+
+  geom_line(size = 1.5,se=T, color ="darkblue")+
+  geom_point(data=Pred148,aes(y =  Amyloid, x = Prediction),size =3, color = "darkorange")+
+  geom_smooth(method="lm",se= T,color = "azure4",size=1.5)+
+  xlim(0,1) +
+  ylim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+      
+  labs(y="Amyloid - node", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =1.25, x = 0.85, parse = TRUE, label = "r^2 == 0.62", size=10 )+annotate("text", y =1.25, x = 0.85, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+ggsave(
+  file="Amyloidsyd.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+```{r}
+cor.test(Pred148$Amyloid,Pred148$Prediction, method=c("pearson"))$p.value
+
+```
+
+
+
+## Sygmoidal Tau
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/final_lastscan_320_ATN copy.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(149:296)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+```
+
+
+```{r}
+x<-Pred148$Prediction
+y<-Pred148$Amyloid
+
+
+m<-nls(y~1/b*log((1/x)-1)+e, Pred148, start=list(b=-1, e=1))
+opar <- par(las = 1)
+
+tt <- seq(0, 2.5, length.out = 1000)
+plot(x,y, data = Pred148)
+lines(tt, predict(m, list(x = tt)))
+
+```
+
+# Sygmoidal Tau graph
+```{r sygmoidal}
+a<-predict(m, list(x = tt))
+data<-as.data.frame(cbind(a,tt))
+
+ATdiff<- ggplot(data=data, aes(y=a, x=tt))+
+  geom_line(size = 1.5,se=T, color ="darkblue")+
+  geom_point(data=Pred148,aes(y =  Amyloid, x = Prediction),size =3, color = "darkorange")+
+  geom_smooth(method="lm",se= T,color = "azure4",size=1.5)+
+  xlim(0,1) +
+  ylim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+      
+  labs(y="Tau - node", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.55, x = 0.85, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+ggsave(
+  file="Tausyd.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+
+```
+
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred148, aes(y =  Amyloid, x = Prediction)) +
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="N - node", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  ylim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.55, x = 0.85, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+
+ggsave(
+  file="AmyloidvsPred.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+#### Begin here
+
+### A
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(1:148)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred148, aes(x =  Amyloid, y = Prediction)) +
+  geom_point(size =3, color = "blue", pch =8)+
+  geom_smooth(method="lm", se=T, col="azure4",size=1.5)+
+      
+  labs(x="Amyloid level", y="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  xlim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+ATdiff
+
+ggsave(
+  file="AmyloidvsPred.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+### T
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(149:296)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred148, aes(x =  Amyloid, y = Prediction)) +
+  geom_point(size =3, color = "blue", pch =8)+
+  geom_smooth(method="lm", se=T, col="azure4",size=1.5)+
+      
+  labs(x="Tau level", y="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  xlim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+ATdiff
+
+ggsave(
+  file="TauvsPred.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+
+
+
+### N
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(297:444)]))
+colnames(pred_148)<-c("Prediction")
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","Amyloid")
+
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred148, aes(x =  Amyloid, y = Prediction)) +
+  geom_point(size =3, color = "blue", pch =8)+
+  geom_smooth(method="lm", se=T, col="azure4",size=1.5)+
+      
+  labs(x="Neurodegeneration level", y="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  ylim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  xlim(min(Pred148$Amyloid),max(Pred148$Amyloid))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )
+ATdiff
+
+ggsave(
+  file="NvsPred.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+```{r find 95%ci}
+ library(boot)
+foo <- boot(Pred148,function(Pred148,indices)
+        summary(lm(Amyloid~Prediction,Pred148[indices,]))$r.squared,R=10000)
+
+foo$t0
+
+quantile(foo$t,c(0.025,0.975))
+
+```
+## Predict 22 start here
+```{r}
+Pred_updated<-read.csv("/Users/laurentzhang/Downloads/ATNLast.csv")
+pred22 <- read.csv("~/Downloads/2020 research/pred22.csv",header = TRUE)
+pred_148<-as.data.frame(colMeans(Pred_updated[,c(297:444)]))
+pred_320<-as.data.frame(rowMeans(Pred_updated[,c(297:444)]))
+
+colnames(pred_148)<-c("Prediction")
+colnames(pred_320)<-c("Prediction_320")
+```
+
+```{r find 95%ci}
+ library(boot)
+foo <- boot(Pred148,function(Pred148,indices)
+        summary(lm(FDG~Prediction,Pred148[indices,]))$r.squared,R=10000)
+
+foo$t0
+
+quantile(foo$t,c(0.025,0.975))
+
+```
+
+```{r}
+
+Pred148<-cbind(colMeans(pred22[,c(3:150)]),pred_148)
+colnames(Pred148)<-c("Prediction","FDG")
+Pred320<-cbind(rowMeans(pred22[,c(3:150)]),pred_320,pred_320)
+
+colnames(Pred320)<-c("FDG","Prediction","DX")
+
+```
+
+# 148 GRAPH
+
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred148, aes(y =  FDG, x = Prediction)) +
+  geom_point(size =3, color = "darkorange")+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)
+      
+  labs(y="N - node", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Pred148$Prediction),max(Pred148$Prediction)) + 
+  ylim(min(Pred148$FDG),max(Pred148$FDG))+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.35,.85),
+  legend.direction = "horizontal",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.55, x = 0.85, parse = TRUE, label = "r^2 == 0.62", size=10 )
+ATdiff
+
+ggsave(
+  file="FDGvsPred.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```
+
+
+
+
+
+```{r}
+Pred320$DX<-FDG_new$DX
+
+```
+```{r}
+ for (i in 1:nrow(Pred320)){
+  if (Pred320[i,3]=="LMCI"  )  {
+    Pred320[i,3]="AD"
+  }
+  else if (Pred320[i,3]=="EMCI"|Pred320[i,3]=="CN") {
+    Pred320[i,3]="NC+MCI"
+  }
+  else if (Pred320[i,3]=="SMC"|Pred320[i,3]=="CN") {
+    Pred320[i,3]="NC+MCI"
+  }
+}
+```
+```{r}
+summary(lm(Pred148$Prediction~Pred148$FDG))
+```
+# 320 GRAPH
+
+```{r N VS A}
+#PTID320<-PTID[which(Patient320$PTID %in% PTID$ID),]
+
+ATdiff<- ggplot(Pred320, aes(y =  Prediction, x = FDG, color = DX)) +
+  geom_point(pch=2,size =3)+
+  geom_smooth(method="lm", se=T,  col="azure4", size=1.5)+
+      
+  labs(y="N - subject ", x="Predicted risk")+
+guides(size = "none"  )+
+  theme_bw()+
+  xlim(min(Pred320$FDG),max(Pred320$FDG)) + 
+  ylim(min(Pred320$Prediction),1.2)+
+  theme( aspect.ratio=3/4,
+    text = element_text(size=30),
+    axis.title.y = element_text(size = 30),
+    
+    # change legend font size
+    legend.text=element_text(size=30),
+    # Remove panel grid lines
+    
+    
+    panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Remove panel background
+  panel.background = element_blank(),
+    legend.key=element_blank(),
+    legend.background=element_blank(),
+    legend.title = element_blank(),
+    legend.position =c(.01,.82),
+  legend.direction = "vertical",
+    legend.justification = c(0.05, 0.1),
+    legend.box.just = "right",
+    legend.key.size = unit(1, "cm")
+    )+annotate("text", y =0.74, x = 0.875, parse = TRUE, label = "r^2 == 0.13", size=10 )
+ATdiff
+
+ggsave(
+  file="FDGvsPred320.png",
+  plot = ATdiff,
+  device = "png",
+ # path = NULL,
+  #scale = 1,
+  width = 4*1.8,
+  height = 3*1.8,
+  units = "in"
+  #dpi = 300,
+  #limitsize = TRUE,
+)
+```

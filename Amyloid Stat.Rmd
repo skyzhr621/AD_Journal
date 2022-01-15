@@ -1,0 +1,244 @@
+---
+title: "z-test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(drc)
+library(mixtools)
+library(xlsx)
+library('lubridate')
+Amyloid_SUVR <- read_excel("~/Downloads/Amyloid_SUVR.xlsx")
+Amyloid_change <-read_excel("~/Amyloid_changed.xlsx")
+#Tau_SUVR<-na.omit(Tau_SUVR)
+```
+
+# Amyloid
+Dont' run this
+```{r forming amyloid first and last}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq<2),]
+TABLE2<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE2<- TABLE2[which(TABLE2$Freq>1),]
+
+numvariable = nrow(Amyloid_SUVR)-sum(TABLE$Freq)-nrow(TABLE2)
+Amyloid_change <- as.data.frame(matrix(0,numvariable, ncol(Amyloid_SUVR)))
+colnames(Amyloid_change) <- colnames(Amyloid_First)
+
+```
+```{r date format}
+startdate <- as.Date("2010-01-01")
+
+for (i in 1:2753) {
+b[i,1] <- as.data.frame(as.Date(paste(ok[i,1], sep=""), "%Y%m%d"))
+}
+colnames(b) <-c("Date")
+
+for(i in 1:2753){
+a[i,1]<-as.numeric(difftime(as.Date(b[i,1]),startdate), units = "days")
+colnames(a) <-c("Difference")
+}
+
+Amyloid_SUVR$SCAN <-a
+```
+
+```{r reschedule amyloid date}
+Amyloid <- as.data.frame(matrix(0,nrow(Amyloid_SUVR), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(Amyloid_SUVR)){
+Amyloid[i,] <- as.data.frame(Amyloid_SUVR[i,])
+}
+Amyloid_SUVR$SCAN <- as.numeric(Amyloid$V2)
+
+```
+```{r forming amyloid first}
+TABLE<-data.frame(table(Amyloid_SUVR$PTID))
+TABLE<- TABLE[which(TABLE$Freq>1),]
+ 
+Amyloid_First<- as.data.frame(matrix(0,nrow(TABLE), ncol(Amyloid_SUVR)))
+for (i in 1:nrow(TABLE)){
+Amyloid_First[i,] <- as.data.frame(Amyloid_SUVR[min(which(Amyloid_SUVR$PTID == TABLE$Var1[i])), ])
+
+}
+colnames(Amyloid_First) <- colnames(Amyloid_SUVR)
+
+```
+
+```{r output}
+colnames(Amyloid_change) <-colnames(Amyloid_First)
+Amyloid_change<- Amyloid_change %>% 
+  rename(
+    Time= SCAN,
+    DXfirst = EXAMDATE,
+    DXlast = DX
+    )
+#colnames(Amyloid_change) <- c("PTID","Timechange", "DXfirst", "DXlast", "Age", "Gender", "Education","Ethic", "Ethiccate","Marry","APOE4")
+#write.xlsx(Amyloid_change, 'Amyloid_changed.xlsx')
+```
+
+```{r amyloid change}
+l =1;
+Amyloid_change <- as.data.frame(matrix(0,numvariable, ncol(Amyloid_SUVR)))
+ for (i in 1:nrow(Amyloid_First)) {
+   
+   # Find correspondeces
+   for (j in 1:nrow(Amyloid_SUVR)){
+   
+    #If PTID is equal and time is not equal
+    if(Amyloid_First[i,1] == Amyloid_SUVR[j,1]){
+      if(as.numeric(Amyloid_First[i,2]) != as.numeric(Amyloid_SUVR[j,2])) {
+    
+     # Find chanegs in 148 nodes
+      for (k in 1:148){
+       Amyloid_change[l,11+k] <- Amyloid_SUVR[j,11+k] - Amyloid_First[i,11+k];
+      }
+      # PTID and Date
+      Amyloid_change[l,1]<-Amyloid_SUVR[j,1];
+      Amyloid_change[l,2]<-Amyloid_SUVR[j,2] - Amyloid_First[i,2];
+      # DXs
+      Amyloid_change[l,3]<-Amyloid_SUVR[j,4];
+      Amyloid_change[l,4]<-Amyloid_First[i,4];
+      # Rest
+      Amyloid_change[l,5]<-Amyloid_First[i,5];
+      Amyloid_change[l,6]<-Amyloid_First[i,6];
+      Amyloid_change[l,7]<-Amyloid_First[i,7];
+      Amyloid_change[l,8]<-Amyloid_First[i,8];
+      Amyloid_change[l,9]<-Amyloid_First[i,9];
+      Amyloid_change[l,10]<-Amyloid_First[i,10];
+      Amyloid_change[l,11]<-Amyloid_First[i,11];
+      
+      l=l+1;
+     }
+    }
+  }
+ }
+                          
+```
+
+```{r delete CN}
+Amyloid_noCN <- Amyloid_change[which(Amyloid_change$DXlast!='CN'), ]
+Amyloid_noCN$...1 <- NULL
+```
+
+
+
+## Amyloid Statistic
+
+#### Useful part
+```{r linear regression}
+
+fit1<-lm(Amyloid_change$`Node 93` ~ Amyloid_change$Time)
+summary(fit1)
+plot(Amyloid_change$`Node 93` ~ Amyloid_change$Time)+
+  abline(fit1)
+```
+```{r all data}
+
+temp <- as.data.frame(Amyloid_change[,12:159])
+
+storage <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Amyloid_change$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["Amyloid_change$Time"])
+}
+
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Amyloid_change$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta","p-value")
+#max(result)
+```
+
+
+```{r}
+
+temp <- as.data.frame(Amyloid_noCN[,12:159])
+
+storage <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Amyloid_noCN$Time, temp)
+  storage[[i]] <- as.data.frame(coef(fit)["Amyloid_noCN$Time"])
+}
+
+storage2 <- list()
+for(i in names(temp)){
+  fit <- lm(get(i) ~ Amyloid_noCN$Time, temp)
+  storage2[[i]] <- as.data.frame(summary(fit)$coefficients[2,4])
+}
+result <- data.frame(matrix(unlist(storage), nrow=length(storage), byrow=TRUE))
+result[,2] <-data.frame(matrix(unlist(storage2), nrow=length(storage), byrow=TRUE))
+
+colnames(result) <- c("Node beta","p-value")
+#max(result)
+```
+
+```{r}
+#save(result,file="amyloidresult.Rda")
+```
+
+
+```{r delete CN}
+Amyloid_CN <- Amyloid_change[which(Amyloid_change$DXlast=='CN'), ]
+Amyloid_CN$...1 <- NULL
+
+Amyloid_AD <- Amyloid_change[which(Amyloid_change$DXlast=='AD'), ]
+Amyloid_AD$...1 <- NULL
+
+Amyloid_LMCI <- Amyloid_change[which(Amyloid_change$DXlast=='LMCI'), ]
+Amyloid_AD$...1 <- NULL
+
+Amyloid_EMCI <- Amyloid_change[which(Amyloid_change$DXlast=='EMCI'), ]
+Amyloid_EMCI$...1 <- NULL
+```
+
+```{r node analysis}
+## AD
+temp <- Amyloid_AD[12:159]
+ADmean<- as.data.frame(colMeans(temp))
+mean(ADmean$`colMeans(temp)`)
+
+## CN
+temp <- Amyloid_CN[12:159]
+CNmean<- as.data.frame(colMeans(temp))
+mean(CNmean$`colMeans(temp)`)
+
+
+```
+
+```{r linear regression}
+plot(Amyloid_AD$`Node 147` ~ Amyloid_AD$Time)+
+  abline(fit1)
+plot(Amyloid_CN$`Node 147` ~ Amyloid_CN$Time)+
+  abline(fit1)
+```
+
+```{r rowmean-AD}
+temp <- Amyloid_AD[c(12:159)]
+Amyloid_mean<-as.data.frame(rowMeans(temp))
+Amyloid_mean[,2]<-Amyloid_AD[,2]
+
+fit1<-lm(Amyloid_mean$`rowMeans(temp)` ~ Amyloid_mean$Time)
+plot(Amyloid_mean$`rowMeans(temp)` ~ Amyloid_mean$Time)+
+  abline(fit1)
+
+
+```
+```{r rowmean-CN}
+temp2 <- Amyloid_CN[c(12:159)]
+Amyloid_CNmean<-as.data.frame(rowMeans(temp2))
+Amyloid_CNmean[,2]<-Amyloid_CN[,2]
+
+fit2<-lm(Amyloid_CNmean$`rowMeans(temp2)` ~ Amyloid_CNmean$Time)
+plot(Amyloid_CNmean$`rowMeans(temp2)` ~ Amyloid_CNmean$Time)+
+  abline(fit2)
+
+
+```
